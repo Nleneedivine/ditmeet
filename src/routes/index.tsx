@@ -96,8 +96,7 @@ function Landing() {
   );
 }
 
-function Dashboard() {
-  const { user } = useAuth();
+function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
