@@ -80,6 +80,7 @@ interface ChatMessage {
 interface AttendeeRow extends AttendanceRow {
   id: string;
   meeting_id: string;
+  hand_raised_at: string | null;
 }
 
 interface SpeakerTimer {
