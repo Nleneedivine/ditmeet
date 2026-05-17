@@ -18,28 +18,37 @@ export type Database = {
         Row: {
           email: string
           full_name: string
+          hand_raised_at: string | null
           id: string
+          is_admin: boolean
           joined_at: string
           left_at: string | null
           meeting_id: string
+          status: string
           user_id: string | null
         }
         Insert: {
           email: string
           full_name: string
+          hand_raised_at?: string | null
           id?: string
+          is_admin?: boolean
           joined_at?: string
           left_at?: string | null
           meeting_id: string
+          status?: string
           user_id?: string | null
         }
         Update: {
           email?: string
           full_name?: string
+          hand_raised_at?: string | null
           id?: string
+          is_admin?: boolean
           joined_at?: string
           left_at?: string | null
           meeting_id?: string
+          status?: string
           user_id?: string | null
         }
         Relationships: [
@@ -84,6 +93,33 @@ export type Database = {
           },
         ]
       }
+      meeting_speaker_timers: {
+        Row: {
+          attendee_id: string
+          created_by: string
+          id: string
+          meeting_id: string
+          seconds: number
+          started_at: string
+        }
+        Insert: {
+          attendee_id: string
+          created_by: string
+          id?: string
+          meeting_id: string
+          seconds: number
+          started_at?: string
+        }
+        Update: {
+          attendee_id?: string
+          created_by?: string
+          id?: string
+          meeting_id?: string
+          seconds?: number
+          started_at?: string
+        }
+        Relationships: []
+      }
       meetings: {
         Row: {
           created_at: string
@@ -91,6 +127,7 @@ export type Database = {
           ended_at: string | null
           host_id: string
           id: string
+          recording_started_at: string | null
           room_name: string
           room_url: string
           scheduled_at: string | null
@@ -98,6 +135,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          waiting_room_enabled: boolean
         }
         Insert: {
           created_at?: string
@@ -105,6 +143,7 @@ export type Database = {
           ended_at?: string | null
           host_id: string
           id?: string
+          recording_started_at?: string | null
           room_name: string
           room_url: string
           scheduled_at?: string | null
@@ -112,6 +151,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          waiting_room_enabled?: boolean
         }
         Update: {
           created_at?: string
@@ -119,6 +159,7 @@ export type Database = {
           ended_at?: string | null
           host_id?: string
           id?: string
+          recording_started_at?: string | null
           room_name?: string
           room_url?: string
           scheduled_at?: string | null
@@ -126,6 +167,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          waiting_room_enabled?: boolean
         }
         Relationships: []
       }
