@@ -133,6 +133,8 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
         .select()
         .single();
       if (error) throw error;
+      const link = `${window.location.origin}/m/${data.room_name}`;
+      try { await navigator.clipboard.writeText(link); toast.success("Link copied to clipboard"); } catch { /* noop */ }
       navigate({ to: "/m/$roomName", params: { roomName: data.room_name } });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to start meeting");
