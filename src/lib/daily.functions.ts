@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const DAILY_API = "https://api.daily.co/v1";
 
@@ -45,4 +46,54 @@ export const createDailyRoom = createServerFn({ method: "POST" })
     }
     const room = (await res.json()) as { name: string; url: string };
     return { name: room.name, url: room.url };
+  });
+
+const tokenInput = z.object({
+  roomName: z.string().min(1).max(80),
+  userName: z.string().min(1).max(80),
+  hostUserId: z.string().uuid().optional(),
+});
+
+/**
+ * Mints a Daily meeting token. If `hostUserId` matches the meeting's host_id,
+ * the token is granted owner privileges (can mute/eject others). Otherwise a
+ * regular guest token is issued. Never trust the client for is_owner.
+ */
+export const createDailyMeetingToken = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => tokenInput.parse(input))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.DAILY_API_KEY;
+    if (!apiKey) throw new Error("DAILY_API_KEY is not configured");
+
+    let isOwner = false;
+    if (data.hostUserId) {
+      const { data: meeting } = await supabaseAdmin
+        .from("meetings")
+        .select("host_id")
+        .eq("room_name", data.roomName)
+        .maybeSingle();
+      if (meeting?.host_id === data.hostUserId) isOwner = true;
+    }
+
+    const res = await fetch(`${DAILY_API}/meeting-tokens`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        properties: {
+          room_name: data.roomName,
+          user_name: data.userName,
+          is_owner: isOwner,
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 6,
+        },
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Daily token create failed [${res.status}]: ${txt}`);
+    }
+    const { token } = (await res.json()) as { token: string };
+    return { token, isOwner };
   });

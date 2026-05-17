@@ -36,7 +36,7 @@ function Home() {
       </div>
     );
   }
-  return user ? <Dashboard /> : <Landing />;
+  return user ? <Dashboard user={user} /> : <Landing />;
 }
 
 function Landing() {
@@ -96,8 +96,7 @@ function Landing() {
   );
 }
 
-function Dashboard() {
-  const { user } = useAuth();
+function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +133,8 @@ function Dashboard() {
         .select()
         .single();
       if (error) throw error;
+      const link = `${window.location.origin}/m/${data.room_name}`;
+      try { await navigator.clipboard.writeText(link); toast.success("Link copied to clipboard"); } catch { /* noop */ }
       navigate({ to: "/m/$roomName", params: { roomName: data.room_name } });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to start meeting");
