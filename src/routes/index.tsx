@@ -36,7 +36,7 @@ function Home() {
       </div>
     );
   }
-  return user ? <Dashboard /> : <Landing />;
+  return user ? <Dashboard user={user} /> : <Landing />;
 }
 
 function Landing() {
