@@ -169,8 +169,8 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
         <div className="grid gap-6 md:grid-cols-2 mb-12">
           <VelvetCard glow="strong" className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="size-12 rounded-xl bg-[var(--gradient-gold)] flex items-center justify-center glow-gold-sm">
-                <Video className="size-6 text-[#0a0a2e]" />
+              <div className="size-12 rounded-xl bg-[image:var(--gradient-gold)] flex items-center justify-center glow-gold-sm">
+                <Video className="size-6 text-[#0a1a3a]" />
               </div>
               <div>
                 <h2 className="font-display text-2xl text-gold">Start Instant Meeting</h2>
@@ -185,7 +185,7 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
           <VelvetCard glow="holo" className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="size-12 rounded-xl bg-holo flex items-center justify-center">
-                <Calendar className="size-6 text-[#0a0a2e]" />
+                <Calendar className="size-6 text-[#0a1a3a]" />
               </div>
               <div>
                 <h2 className="font-display text-2xl">Schedule a Meeting</h2>
