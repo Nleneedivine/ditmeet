@@ -732,20 +732,23 @@ function Room({
 
 /* ───────────────── Sub-components ───────────────── */
 
-function ControlButton({ active, onClick, label, icon, badge }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode; badge?: number }) {
+function ControlButton({ active, onClick, label, icon, badge, offAlert }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode; badge?: number; offAlert?: boolean }) {
+  const stateClass = active
+    ? "border-[var(--border-strong)] bg-[color:var(--accent)]/15 text-foreground glow-accent-sm"
+    : offAlert
+      ? "border-rose-500/60 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25"
+      : "border-[var(--border-soft)] bg-[color:var(--accent)]/5 text-foreground/85 hover:text-foreground hover:bg-[color:var(--accent)]/15";
   return (
     <button
       onClick={onClick}
       title={label}
-      className={`relative inline-flex flex-col items-center justify-center size-12 md:size-14 rounded-xl border transition-all ${
-        active
-          ? "border-[oklch(0.82_0.16_88/0.6)] bg-[oklch(0.82_0.16_88/0.12)] text-[oklch(0.92_0.10_88)] glow-gold-sm"
-          : "border-border bg-white/5 text-foreground/80 hover:text-foreground hover:bg-white/10"
-      }`}
+      aria-label={label}
+      aria-pressed={active}
+      className={`relative inline-flex flex-col items-center justify-center size-11 md:size-12 rounded-xl border transition-all shrink-0 ${stateClass}`}
     >
       {icon}
       {badge ? (
-        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[var(--gradient-gold)] text-[10px] font-bold text-[#0a0a2e] flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[image:var(--gradient-gold)] text-[10px] font-bold text-[#0a1a3a] flex items-center justify-center">
           {badge}
         </span>
       ) : null}
