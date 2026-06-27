@@ -49,6 +49,7 @@ import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRo
 import { Logo } from "@/components/brand/Logo";
 import { GoldButton } from "@/components/brand/GoldButton";
 import { VelvetCard } from "@/components/brand/VelvetCard";
+import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -575,54 +576,62 @@ function Room({
   const effectiveSpotlight = screenOwnerId ?? spotlightId;
 
   return (
-    <div className="min-h-screen flex flex-col bg-velvet relative overflow-hidden">
-      {/* Recording banner */}
-      {(recording || meeting.recording_started_at) && (
-        <div className="bg-rose-500/20 border-b border-rose-400/40 text-rose-100 text-xs text-center py-1.5 backdrop-blur-sm">
-          <span className="inline-flex items-center gap-1.5"><Circle className="size-2 fill-rose-400 text-rose-400 animate-rec-blink" /> Recording in progress</span>
-        </div>
-      )}
-
+    <div className="h-screen flex flex-col bg-velvet relative overflow-hidden">
       {/* Top bar */}
-      <header className="px-4 md:px-6 py-3 flex items-center gap-4 border-b border-[oklch(0.82_0.16_88/0.2)]">
+      <header className="px-3 md:px-5 py-2.5 flex items-center gap-3 border-b border-[var(--border-soft)] bg-card-velvet shrink-0">
         <Logo size="sm" />
-        <div className="flex-1 text-center">
-          <div className="text-xs uppercase tracking-[0.3em] text-rainbow font-semibold">{meeting.title}{isOwner && " · Host"}</div>
-          <div className="font-display text-2xl md:text-3xl text-gold tabular-nums pulse-gold">
+        <div className="flex-1 min-w-0 text-center">
+          <div className="text-[10px] uppercase tracking-[0.3em] text-rainbow font-semibold truncate">
+            {meeting.title}{isOwner && " · Host"}
+          </div>
+          <div className="font-display text-lg md:text-xl text-gold tabular-nums pulse-gold leading-tight">
             {formatDuration(elapsed)}
           </div>
         </div>
         <GoldButton variant="ghost" size="sm" onClick={copyLink}>
           <Copy className="size-4" /> <span className="hidden md:inline">Copy link</span>
         </GoldButton>
+        <ThemeToggle />
       </header>
 
-      {/* Body */}
-      <div className="flex-1 flex overflow-hidden relative">
-        <main className="flex-1 p-3 md:p-6 overflow-auto relative">
-          <ParticipantGrid
-            ids={participantIds}
-            attendees={attendees}
-            timers={timers}
-            spotlightId={effectiveSpotlight}
-            isOwner={isOwner}
-            onSpotlight={(id) => reactionChannelRef.current?.send({ type: "broadcast", event: "spotlight", payload: { id } })}
-            onMute={(sid) => daily?.updateParticipant(sid, { setAudio: false })}
-            onEject={async (sid, attId) => {
-              try { await daily?.updateParticipant(sid, { eject: true }); } catch { /* noop */ }
-              if (attId) await supabase.from("meeting_attendees").update({ status: "removed", left_at: new Date().toISOString() }).eq("id", attId);
-            }}
-            onTimer={async (attId, seconds) => {
-              await supabase.from("meeting_speaker_timers").delete().eq("meeting_id", meeting.id).eq("attendee_id", attId);
-              await supabase.from("meeting_speaker_timers").insert({ meeting_id: meeting.id, attendee_id: attId, seconds, created_by: meeting.host_id });
-              toast.success(`Timer set: ${seconds}s`);
-            }}
-            onRequestShare={(sid) => {
-              reactionChannelRef.current?.send({ type: "broadcast", event: "request-share", payload: { targetSessionId: sid } });
-              toast.message("Screen-share request sent.");
-            }}
-            annotating={annotating}
-          />
+      {/* Recording banner (slim, never pushes content off) */}
+      {(recording || meeting.recording_started_at) && (
+        <div className="shrink-0 bg-rose-500/20 border-b border-rose-400/40 text-rose-100 text-xs text-center py-1 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <Circle className="size-2 fill-rose-400 text-rose-400 animate-rec-blink" />
+            Recording in progress
+          </span>
+        </div>
+      )}
+
+      {/* Body — flex-1 with min-h-0 so children don't blow out the height */}
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
+        <main className="flex-1 p-2 md:p-4 overflow-hidden relative min-w-0 flex flex-col">
+          <div className="flex-1 min-h-0">
+            <ParticipantGrid
+              ids={participantIds}
+              attendees={attendees}
+              timers={timers}
+              spotlightId={effectiveSpotlight}
+              isOwner={isOwner}
+              onSpotlight={(id) => reactionChannelRef.current?.send({ type: "broadcast", event: "spotlight", payload: { id } })}
+              onMute={(sid) => daily?.updateParticipant(sid, { setAudio: false })}
+              onEject={async (sid, attId) => {
+                try { await daily?.updateParticipant(sid, { eject: true }); } catch { /* noop */ }
+                if (attId) await supabase.from("meeting_attendees").update({ status: "removed", left_at: new Date().toISOString() }).eq("id", attId);
+              }}
+              onTimer={async (attId, seconds) => {
+                await supabase.from("meeting_speaker_timers").delete().eq("meeting_id", meeting.id).eq("attendee_id", attId);
+                await supabase.from("meeting_speaker_timers").insert({ meeting_id: meeting.id, attendee_id: attId, seconds, created_by: meeting.host_id });
+                toast.success(`Timer set: ${seconds}s`);
+              }}
+              onRequestShare={(sid) => {
+                reactionChannelRef.current?.send({ type: "broadcast", event: "request-share", payload: { targetSessionId: sid } });
+                toast.message("Screen-share request sent.");
+              }}
+              annotating={annotating}
+            />
+          </div>
 
           {/* Floating reactions */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -662,10 +671,10 @@ function Room({
         )}
       </div>
 
-      {/* Controls */}
-      <footer className="px-2 md:px-4 py-3 flex flex-wrap items-center justify-center gap-2 border-t border-[oklch(0.82_0.16_88/0.2)] bg-[oklch(0.10_0.05_270/0.6)] backdrop-blur-sm">
-        <ControlButton active={micOn} onClick={toggleMic} label={micOn ? "Mute" : "Unmute"} icon={micOn ? <Mic className="size-5" /> : <MicOff className="size-5" />} />
-        <ControlButton active={camOn} onClick={toggleCam} label={camOn ? "Camera off" : "Camera on"} icon={camOn ? <VideoIcon className="size-5" /> : <VideoOff className="size-5" />} />
+      {/* Controls — pinned bottom, scrollable horizontally on tiny screens */}
+      <footer className="shrink-0 px-2 md:px-4 py-2 flex items-center justify-center gap-2 border-t border-[var(--border-soft)] bg-card-velvet overflow-x-auto">
+        <ControlButton active={micOn} offAlert onClick={toggleMic} label={micOn ? "Mute" : "Unmute"} icon={micOn ? <Mic className="size-5" /> : <MicOff className="size-5" />} />
+        <ControlButton active={camOn} offAlert onClick={toggleCam} label={camOn ? "Camera off" : "Camera on"} icon={camOn ? <VideoIcon className="size-5" /> : <VideoOff className="size-5" />} />
         <ControlButton
           active={isSharingScreen}
           onClick={() => (isSharingScreen ? stopScreenShare() : startScreenShare())}
@@ -680,7 +689,7 @@ function Room({
 
         <Popover>
           <PopoverTrigger asChild>
-            <button title="React" className="relative inline-flex flex-col items-center justify-center size-12 md:size-14 rounded-xl border border-border bg-white/5 text-foreground/80 hover:text-foreground hover:bg-white/10 transition-all">
+            <button title="React" aria-label="React" className="relative inline-flex flex-col items-center justify-center size-11 md:size-12 rounded-xl border border-[var(--border-soft)] bg-[color:var(--accent)]/5 text-foreground/85 hover:text-foreground hover:bg-[color:var(--accent)]/15 transition-all shrink-0">
               <PartyPopper className="size-5" />
             </button>
           </PopoverTrigger>
@@ -693,13 +702,13 @@ function Room({
           </PopoverContent>
         </Popover>
 
-        <div className="w-px h-8 bg-border mx-1 hidden md:block" />
+        <div className="w-px h-7 bg-border mx-1 hidden md:block" />
         <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) setShowChat(false); }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
         <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) setShowPeople(false); }} label="Chat" icon={<MessageSquare className="size-5" />} />
 
         {isOwner && (
           <>
-            <div className="w-px h-8 bg-border mx-1 hidden md:block" />
+            <div className="w-px h-7 bg-border mx-1 hidden md:block" />
             <ControlButton
               active={recording}
               onClick={recording ? stopRecording : startRecording}
@@ -707,13 +716,13 @@ function Room({
               icon={recording ? <Square className="size-5 fill-rose-400 text-rose-400" /> : <Circle className="size-5" />}
             />
             <GoldButton variant="outline" size="sm" onClick={endForAll}>
-              <Trash2 className="size-4" /> End for all
+              <Trash2 className="size-4" /> <span className="hidden md:inline">End for all</span>
             </GoldButton>
           </>
         )}
 
-        <div className="w-px h-8 bg-border mx-1 hidden md:block" />
-        <GoldButton variant="danger" onClick={onLeave}>
+        <div className="w-px h-7 bg-border mx-1 hidden md:block" />
+        <GoldButton variant="danger" size="sm" onClick={onLeave}>
           <LogOut className="size-4" /> Leave
         </GoldButton>
       </footer>
