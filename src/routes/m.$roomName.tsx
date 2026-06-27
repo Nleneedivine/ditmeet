@@ -816,7 +816,7 @@ function ParticipantGrid({
 
   const cols = ids.length <= 1 ? "grid-cols-1" : ids.length <= 4 ? "grid-cols-1 md:grid-cols-2" : ids.length <= 9 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-3 md:grid-cols-4";
   return (
-    <div className={`grid ${cols} gap-3 md:gap-4 auto-rows-fr h-full min-h-[60vh]`}>
+    <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-fr h-full`}>
       {ids.map((id) => (
         <ParticipantTile key={id} id={id} attendees={attendees} timers={timers} isOwner={isOwner} onSpotlight={onSpotlight} onMute={onMute} onEject={onEject} onTimer={onTimer} onRequestShare={onRequestShare} />
       ))}
