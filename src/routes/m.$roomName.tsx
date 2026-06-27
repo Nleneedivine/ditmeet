@@ -786,7 +786,7 @@ function ParticipantGrid({
     const others = ids.filter((id) => id !== spotlightId);
     return (
       <div className="flex flex-col h-full gap-3">
-        <div className="flex-1 min-h-[50vh] relative">
+        <div className="flex-1 min-h-0 relative">
           <ParticipantTile
             id={spotlightId}
             attendees={attendees}
