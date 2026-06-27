@@ -270,7 +270,7 @@ function MeetingPage() {
           <p className="text-sm text-muted-foreground mt-2">
             The host has been notified. We'll let you in any moment.
           </p>
-          <div className="mt-6 inline-block size-3 rounded-full bg-[var(--gradient-gold)] animate-pulse" />
+          <div className="mt-6 inline-block size-3 rounded-full bg-[image:var(--gradient-gold)] animate-pulse" />
         </VelvetCard>
       </div>
     );
@@ -891,7 +891,7 @@ function ParticipantTile({
         <video ref={ref} autoPlay playsInline muted={isLocal} className="w-full h-full object-cover" />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,oklch(0.22_0.10_290/0.7),oklch(0.10_0.05_270/0.95))]">
-          <div className={`${isSpotlight ? "size-32 text-5xl" : "size-20 text-3xl"} rounded-full bg-[var(--gradient-gold)] flex items-center justify-center font-display font-bold text-[#0a0a2e] glow-gold-sm`}>
+          <div className={`${isSpotlight ? "size-32 text-5xl" : "size-20 text-3xl"} rounded-full bg-[image:var(--gradient-gold)] flex items-center justify-center font-display font-bold text-[#0a0a2e] glow-gold-sm`}>
             {initials}
           </div>
         </div>
@@ -900,7 +900,7 @@ function ParticipantTile({
       {/* Top badges */}
       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
         {isOwnerTile && (
-          <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[var(--gradient-gold)] text-[#0a0a2e] font-bold inline-flex items-center gap-1">
+          <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-[image:var(--gradient-gold)] text-[#0a0a2e] font-bold inline-flex items-center gap-1">
             <Crown className="size-3" /> Host
           </span>
         )}
@@ -1156,7 +1156,7 @@ function ChatPanel({ messages, draft, setDraft, onSend, me }: { messages: ChatMe
           return (
             <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{m.sender_name}</span>
-              <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${mine ? "bg-[var(--gradient-gold)] text-[#0a0a2e] rounded-br-sm" : "bg-white/5 border border-border text-foreground rounded-bl-sm"}`}>
+              <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${mine ? "bg-[image:var(--gradient-gold)] text-[#0a0a2e] rounded-br-sm" : "bg-white/5 border border-border text-foreground rounded-bl-sm"}`}>
                 {m.body}
               </div>
             </div>
