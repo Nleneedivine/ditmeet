@@ -12,6 +12,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/brand/Logo";
 import { GoldButton } from "@/components/brand/GoldButton";
 import { VelvetCard } from "@/components/brand/VelvetCard";
+import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { ScheduleDialog } from "@/components/meetings/ScheduleDialog";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -55,11 +56,11 @@ function Landing() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <Header />
+      <Header showLogo={false} />
       <section className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="max-w-3xl text-center animate-fade-up">
           <div className="float-soft inline-block">
-            <Logo size="xl" showAnniversary />
+            <Logo size="xl" />
           </div>
           <h1 className="mt-8 font-display text-4xl md:text-6xl font-bold leading-tight">
             <span className="text-gold">Meetings,</span>{" "}
@@ -71,7 +72,7 @@ function Landing() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <GoldButton size="lg" onClick={handleGoogle} disabled={signingIn} className="glow-pulse">
               <Sparkles className="size-4" />
-              {signingIn ? "Opening Google…" : "Sign in with Google"}
+              <span>{signingIn ? "Opening Google…" : "Sign in with Google"}</span>
             </GoldButton>
             <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
               Have a meeting link? Open it in your browser →
@@ -79,7 +80,7 @@ function Landing() {
           </div>
           <div className="mt-20 grid gap-4 md:grid-cols-3">
             {[
-              { t: "Instant rooms", d: "One click. Gold-trim video grid. No waiting." },
+              { t: "Instant rooms", d: "One click. Crisp blue trim. No waiting." },
               { t: "Scheduled sessions", d: "Plan ahead. Share an elegant link." },
               { t: "Guest-friendly", d: "No account required to join — just name & email." },
             ].map((f) => (
@@ -283,20 +284,19 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function Header() {
+function Header({ showLogo = true }: { showLogo?: boolean }) {
   const { user } = useAuth();
   return (
-    <header className="px-6 py-4 flex items-center justify-between border-b border-[oklch(0.82_0.16_88/0.15)] backdrop-blur-sm">
-      <Link to="/" className="flex items-center gap-3">
-        <Logo size="sm" />
+    <header className="px-4 md:px-6 py-3 flex items-center justify-between border-b border-[var(--border-soft)] backdrop-blur-sm bg-card-velvet">
+      <Link to="/" className="flex items-center gap-3 min-w-0">
+        {showLogo && <Logo size="sm" />}
       </Link>
-      <nav className="text-sm text-muted-foreground">
-        {user ? (
-          <span className="hidden md:inline">{user.email}</span>
-        ) : (
-          <span className="hidden md:inline">Velvet Edition · 10 Years of DIT</span>
+      <div className="flex items-center gap-3">
+        {user && (
+          <span className="hidden md:inline text-sm text-muted-foreground truncate max-w-[200px]">{user.email}</span>
         )}
-      </nav>
+        <ThemeToggle />
+      </div>
     </header>
   );
 }
@@ -304,7 +304,7 @@ function Header() {
 function Footer() {
   return (
     <footer className="px-6 py-6 text-center text-xs text-muted-foreground/70">
-      © DIT Meet · Powered by Daily · Curtain by velvet, glow by gold.
+      © DIT Meet · Divine Intelligence Team · Powered by Daily
     </footer>
   );
 }
