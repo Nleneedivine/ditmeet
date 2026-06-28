@@ -313,6 +313,8 @@ function MeetingPage() {
         attendeeId={attendeeId!}
         onLeave={handleLeave}
       />
+      {/* Renders an <audio> sink for every remote participant so audio is actually heard */}
+      <DailyAudio />
     </DailyProvider>
   );
 }
