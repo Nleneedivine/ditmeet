@@ -127,7 +127,8 @@ export const generateMeetingSummary = createServerFn({ method: "POST" })
         {
           meeting_id: data.meetingId,
           status: "pending_review",
-          content: summary as unknown as Record<string, unknown>,
+          // jsonb column; the DB accepts any JSON-serializable value
+          content: summary as never,
         },
         { onConflict: "meeting_id" },
       );
@@ -170,12 +171,12 @@ export const approveMeetingSummary = createServerFn({ method: "POST" })
       if (!isAdmin) throw new Error("Forbidden");
     }
 
-    const update: Record<string, unknown> = {
-      status: "approved",
+    const update = {
+      status: "approved" as const,
       approved_at: new Date().toISOString(),
+      ...(data.content ? { content: data.content as never } : {}),
+      ...(data.hostNotes ? { host_notes: data.hostNotes as never } : {}),
     };
-    if (data.content) update.content = data.content;
-    if (data.hostNotes) update.host_notes = data.hostNotes;
 
     const { error } = await supabase
       .from("meeting_summaries")
