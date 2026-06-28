@@ -374,6 +374,21 @@ function Room({
   const chunksRef = useRef<BlobPart[]>([]);
   const reactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  // Live transcription (Web Speech API) — local participant only.
+  const { supported: sttSupported, interim: liveInterim } = useLiveTranscription({
+    meetingId: meeting.id,
+    attendeeId,
+    speakerName: guestName,
+    enabled: true,
+  });
+  useEffect(() => {
+    if (!sttSupported) {
+      toast.message("Live captions unavailable in this browser", {
+        description: "Try Chrome or Edge for live AI captions.",
+      });
+    }
+  }, [sttSupported]);
+
   // Timer
   useEffect(() => {
     const i = setInterval(() => setElapsed(Date.now() - startTime), 1000);
