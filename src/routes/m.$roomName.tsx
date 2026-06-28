@@ -785,6 +785,8 @@ function ParticipantGrid({
   timers,
   spotlightId,
   isOwner,
+  meetingId,
+  liveInterim,
   onSpotlight,
   onMute,
   onEject,
@@ -797,6 +799,8 @@ function ParticipantGrid({
   timers: SpeakerTimer[];
   spotlightId: string | null;
   isOwner: boolean;
+  meetingId: string;
+  liveInterim: string;
   onSpotlight: (id: string | null) => void;
   onMute: (sessionId: string) => void;
   onEject: (sessionId: string, attendeeId?: string) => void;
@@ -804,31 +808,21 @@ function ParticipantGrid({
   onRequestShare: (sessionId: string) => void;
   annotating: boolean;
 }) {
+  const common = { attendees, timers, isOwner, meetingId, liveInterim, onSpotlight, onMute, onEject, onTimer, onRequestShare };
   // Spotlight layout: hero + thumbnails strip
   if (spotlightId && ids.includes(spotlightId)) {
     const others = ids.filter((id) => id !== spotlightId);
     return (
       <div className="flex flex-col h-full gap-3">
         <div className="flex-1 min-h-0 relative">
-          <ParticipantTile
-            id={spotlightId}
-            attendees={attendees}
-            timers={timers}
-            isOwner={isOwner}
-            isSpotlight
-            onSpotlight={onSpotlight}
-            onMute={onMute}
-            onEject={onEject}
-            onTimer={onTimer}
-            onRequestShare={onRequestShare}
-          />
+          <ParticipantTile id={spotlightId} isSpotlight {...common} />
           {annotating && <AnnotationOverlay />}
         </div>
         {others.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1">
             {others.map((id) => (
               <div key={id} className="w-44 h-32 shrink-0">
-                <ParticipantTile id={id} attendees={attendees} timers={timers} isOwner={isOwner} onSpotlight={onSpotlight} onMute={onMute} onEject={onEject} onTimer={onTimer} onRequestShare={onRequestShare} />
+                <ParticipantTile id={id} {...common} />
               </div>
             ))}
           </div>
@@ -841,7 +835,7 @@ function ParticipantGrid({
   return (
     <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-fr h-full`}>
       {ids.map((id) => (
-        <ParticipantTile key={id} id={id} attendees={attendees} timers={timers} isOwner={isOwner} onSpotlight={onSpotlight} onMute={onMute} onEject={onEject} onTimer={onTimer} onRequestShare={onRequestShare} />
+        <ParticipantTile key={id} id={id} {...common} />
       ))}
     </div>
   );
