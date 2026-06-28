@@ -61,6 +61,67 @@ export type Database = {
           },
         ]
       }
+      meeting_highlights: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          meeting_id: string
+          note: string
+          range_end: number | null
+          range_start: number | null
+          section: string | null
+          summary_id: string | null
+          transcript_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id: string
+          note: string
+          range_end?: number | null
+          range_start?: number | null
+          section?: string | null
+          summary_id?: string | null
+          transcript_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id?: string
+          note?: string
+          range_end?: number | null
+          range_start?: number | null
+          section?: string | null
+          summary_id?: string | null
+          transcript_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_highlights_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_highlights_summary_id_fkey"
+            columns: ["summary_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_summaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_highlights_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_messages: {
         Row: {
           body: string
@@ -119,6 +180,110 @@ export type Database = {
           started_at?: string
         }
         Relationships: []
+      }
+      meeting_summaries: {
+        Row: {
+          approved_at: string | null
+          content: Json
+          created_at: string
+          host_notes: Json
+          id: string
+          meeting_id: string
+          reminder_sent_at: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["summary_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          content?: Json
+          created_at?: string
+          host_notes?: Json
+          id?: string
+          meeting_id: string
+          reminder_sent_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["summary_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          content?: Json
+          created_at?: string
+          host_notes?: Json
+          id?: string
+          meeting_id?: string
+          reminder_sent_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["summary_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_summaries_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_transcripts: {
+        Row: {
+          attendee_id: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          is_interim: boolean
+          meeting_id: string
+          speaker_name: string
+          speaker_user_id: string | null
+          started_at: string
+          text: string
+          typo_flags: Json | null
+        }
+        Insert: {
+          attendee_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_interim?: boolean
+          meeting_id: string
+          speaker_name: string
+          speaker_user_id?: string | null
+          started_at?: string
+          text: string
+          typo_flags?: Json | null
+        }
+        Update: {
+          attendee_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          is_interim?: boolean
+          meeting_id?: string
+          speaker_name?: string
+          speaker_user_id?: string | null
+          started_at?: string
+          text?: string
+          typo_flags?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_transcripts_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_transcripts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meetings: {
         Row: {
@@ -198,15 +363,43 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "user"
+      summary_status: "pending_review" | "approved" | "sent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -333,6 +526,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "user"],
+      summary_status: ["pending_review", "approved", "sent"],
+    },
   },
 } as const

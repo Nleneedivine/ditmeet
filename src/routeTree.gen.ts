@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SummaryMeetingIdRouteImport } from './routes/summary.$meetingId'
 import { Route as MRoomNameRouteImport } from './routes/m.$roomName'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SummaryMeetingIdRoute = SummaryMeetingIdRouteImport.update({
+  id: '/summary/$meetingId',
+  path: '/summary/$meetingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MRoomNameRoute = MRoomNameRouteImport.update({
   id: '/m/$roomName',
   path: '/m/$roomName',
@@ -33,30 +39,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/m/$roomName': typeof MRoomNameRoute
+  '/summary/$meetingId': typeof SummaryMeetingIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/m/$roomName': typeof MRoomNameRoute
+  '/summary/$meetingId': typeof SummaryMeetingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/m/$roomName': typeof MRoomNameRoute
+  '/summary/$meetingId': typeof SummaryMeetingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sitemap.xml' | '/m/$roomName'
+  fullPaths: '/' | '/sitemap.xml' | '/m/$roomName' | '/summary/$meetingId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sitemap.xml' | '/m/$roomName'
-  id: '__root__' | '/' | '/sitemap.xml' | '/m/$roomName'
+  to: '/' | '/sitemap.xml' | '/m/$roomName' | '/summary/$meetingId'
+  id: '__root__' | '/' | '/sitemap.xml' | '/m/$roomName' | '/summary/$meetingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   MRoomNameRoute: typeof MRoomNameRoute
+  SummaryMeetingIdRoute: typeof SummaryMeetingIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/summary/$meetingId': {
+      id: '/summary/$meetingId'
+      path: '/summary/$meetingId'
+      fullPath: '/summary/$meetingId'
+      preLoaderRoute: typeof SummaryMeetingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/m/$roomName': {
       id: '/m/$roomName'
       path: '/m/$roomName'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   MRoomNameRoute: MRoomNameRoute,
+  SummaryMeetingIdRoute: SummaryMeetingIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

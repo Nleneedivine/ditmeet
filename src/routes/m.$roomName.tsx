@@ -46,6 +46,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { createDailyMeetingToken } from "@/lib/daily.functions";
+import { useLiveTranscription } from "@/hooks/use-live-transcription";
+import { CaptionStrip } from "@/components/meetings/CaptionStrip";
+import { generateMeetingSummary } from "@/lib/summary.functions";
 import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
 import { GoldButton } from "@/components/brand/GoldButton";
@@ -371,6 +374,21 @@ function Room({
   const chunksRef = useRef<BlobPart[]>([]);
   const reactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  // Live transcription (Web Speech API) — local participant only.
+  const { supported: sttSupported, interim: liveInterim } = useLiveTranscription({
+    meetingId: meeting.id,
+    attendeeId,
+    speakerName: guestName,
+    enabled: true,
+  });
+  useEffect(() => {
+    if (!sttSupported) {
+      toast.message("Live captions unavailable in this browser", {
+        description: "Try Chrome or Edge for live AI captions.",
+      });
+    }
+  }, [sttSupported]);
+
   // Timer
   useEffect(() => {
     const i = setInterval(() => setElapsed(Date.now() - startTime), 1000);
@@ -548,6 +566,13 @@ function Room({
       for (const id of participantIds) if (id !== localId) updates[id] = { eject: true };
       try { await daily.updateParticipants(updates); } catch { /* noop */ }
     }
+    // Kick off AI summary in background (host only)
+    if (isOwner) {
+      toast.message("Generating AI summary…", { description: "It will appear in your dashboard under Pending Review." });
+      generateMeetingSummary({ data: { meetingId: meeting.id } })
+        .then(() => toast.success("Summary ready for review"))
+        .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Summary failed"));
+    }
     onLeave();
   };
 
@@ -617,6 +642,8 @@ function Room({
               timers={timers}
               spotlightId={effectiveSpotlight}
               isOwner={isOwner}
+              meetingId={meeting.id}
+              liveInterim={liveInterim}
               onSpotlight={(id) => reactionChannelRef.current?.send({ type: "broadcast", event: "spotlight", payload: { id } })}
               onMute={(sid) => daily?.updateParticipant(sid, { setAudio: false })}
               onEject={async (sid, attId) => {
@@ -765,6 +792,8 @@ function ParticipantGrid({
   timers,
   spotlightId,
   isOwner,
+  meetingId,
+  liveInterim,
   onSpotlight,
   onMute,
   onEject,
@@ -777,6 +806,8 @@ function ParticipantGrid({
   timers: SpeakerTimer[];
   spotlightId: string | null;
   isOwner: boolean;
+  meetingId: string;
+  liveInterim: string;
   onSpotlight: (id: string | null) => void;
   onMute: (sessionId: string) => void;
   onEject: (sessionId: string, attendeeId?: string) => void;
@@ -784,31 +815,21 @@ function ParticipantGrid({
   onRequestShare: (sessionId: string) => void;
   annotating: boolean;
 }) {
+  const common = { attendees, timers, isOwner, meetingId, liveInterim, onSpotlight, onMute, onEject, onTimer, onRequestShare };
   // Spotlight layout: hero + thumbnails strip
   if (spotlightId && ids.includes(spotlightId)) {
     const others = ids.filter((id) => id !== spotlightId);
     return (
       <div className="flex flex-col h-full gap-3">
         <div className="flex-1 min-h-0 relative">
-          <ParticipantTile
-            id={spotlightId}
-            attendees={attendees}
-            timers={timers}
-            isOwner={isOwner}
-            isSpotlight
-            onSpotlight={onSpotlight}
-            onMute={onMute}
-            onEject={onEject}
-            onTimer={onTimer}
-            onRequestShare={onRequestShare}
-          />
+          <ParticipantTile id={spotlightId} isSpotlight {...common} />
           {annotating && <AnnotationOverlay />}
         </div>
         {others.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1">
             {others.map((id) => (
               <div key={id} className="w-44 h-32 shrink-0">
-                <ParticipantTile id={id} attendees={attendees} timers={timers} isOwner={isOwner} onSpotlight={onSpotlight} onMute={onMute} onEject={onEject} onTimer={onTimer} onRequestShare={onRequestShare} />
+                <ParticipantTile id={id} {...common} />
               </div>
             ))}
           </div>
@@ -821,7 +842,7 @@ function ParticipantGrid({
   return (
     <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-fr h-full`}>
       {ids.map((id) => (
-        <ParticipantTile key={id} id={id} attendees={attendees} timers={timers} isOwner={isOwner} onSpotlight={onSpotlight} onMute={onMute} onEject={onEject} onTimer={onTimer} onRequestShare={onRequestShare} />
+        <ParticipantTile key={id} id={id} {...common} />
       ))}
     </div>
   );
@@ -833,6 +854,8 @@ function ParticipantTile({
   timers,
   isOwner,
   isSpotlight,
+  meetingId,
+  liveInterim,
   onSpotlight,
   onMute,
   onEject,
@@ -844,6 +867,8 @@ function ParticipantTile({
   timers: SpeakerTimer[];
   isOwner: boolean;
   isSpotlight?: boolean;
+  meetingId: string;
+  liveInterim: string;
   onSpotlight: (id: string | null) => void;
   onMute: (sessionId: string) => void;
   onEject: (sessionId: string, attendeeId?: string) => void;
@@ -946,6 +971,15 @@ function ParticipantTile({
           </span>
         )}
       </div>
+
+      {/* Live caption strip */}
+      {userName && (
+        <CaptionStrip
+          meetingId={meetingId}
+          speakerName={userName}
+          liveInterim={isLocal ? liveInterim : undefined}
+        />
+      )}
     </div>
   );
 }
