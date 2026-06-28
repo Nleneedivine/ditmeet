@@ -964,6 +964,15 @@ function ParticipantTile({
           </span>
         )}
       </div>
+
+      {/* Live caption strip */}
+      {userName && (
+        <CaptionStrip
+          meetingId={meetingId}
+          speakerName={userName}
+          liveInterim={isLocal ? liveInterim : undefined}
+        />
+      )}
     </div>
   );
 }
