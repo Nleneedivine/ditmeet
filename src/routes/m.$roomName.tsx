@@ -635,6 +635,8 @@ function Room({
               timers={timers}
               spotlightId={effectiveSpotlight}
               isOwner={isOwner}
+              meetingId={meeting.id}
+              liveInterim={liveInterim}
               onSpotlight={(id) => reactionChannelRef.current?.send({ type: "broadcast", event: "spotlight", payload: { id } })}
               onMute={(sid) => daily?.updateParticipant(sid, { setAudio: false })}
               onEject={async (sid, attId) => {
