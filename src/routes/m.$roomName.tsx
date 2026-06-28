@@ -566,6 +566,13 @@ function Room({
       for (const id of participantIds) if (id !== localId) updates[id] = { eject: true };
       try { await daily.updateParticipants(updates); } catch { /* noop */ }
     }
+    // Kick off AI summary in background (host only)
+    if (isOwner) {
+      toast.message("Generating AI summary…", { description: "It will appear in your dashboard under Pending Review." });
+      generateMeetingSummary({ data: { meetingId: meeting.id } })
+        .then(() => toast.success("Summary ready for review"))
+        .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Summary failed"));
+    }
     onLeave();
   };
 
