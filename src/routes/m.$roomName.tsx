@@ -46,6 +46,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { createDailyMeetingToken } from "@/lib/daily.functions";
+import { useLiveTranscription } from "@/hooks/use-live-transcription";
+import { CaptionStrip } from "@/components/meetings/CaptionStrip";
+import { generateMeetingSummary } from "@/lib/summary.functions";
 import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
 import { GoldButton } from "@/components/brand/GoldButton";
