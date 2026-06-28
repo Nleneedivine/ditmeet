@@ -847,6 +847,8 @@ function ParticipantTile({
   timers,
   isOwner,
   isSpotlight,
+  meetingId,
+  liveInterim,
   onSpotlight,
   onMute,
   onEject,
@@ -858,6 +860,8 @@ function ParticipantTile({
   timers: SpeakerTimer[];
   isOwner: boolean;
   isSpotlight?: boolean;
+  meetingId: string;
+  liveInterim: string;
   onSpotlight: (id: string | null) => void;
   onMute: (sessionId: string) => void;
   onEject: (sessionId: string, attendeeId?: string) => void;
