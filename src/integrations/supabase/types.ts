@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      meeting_agenda_items: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          meeting_id: string
+          notes: string | null
+          position: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          meeting_id: string
+          notes?: string | null
+          position?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          notes?: string | null
+          position?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_agenda_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_attendees: {
         Row: {
           email: string
@@ -57,6 +101,105 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_commitment_reactions: {
+        Row: {
+          attendee_id: string
+          commitment_id: string
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          reactor_name: string
+        }
+        Insert: {
+          attendee_id: string
+          commitment_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          reactor_name: string
+        }
+        Update: {
+          attendee_id?: string
+          commitment_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          reactor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_commitment_reactions_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_commitment_reactions_commitment_id_fkey"
+            columns: ["commitment_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_commitments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_commitments: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          id: string
+          meeting_id: string
+          source: string
+          speaker_attendee_id: string | null
+          speaker_name: string
+          status: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          meeting_id: string
+          source?: string
+          speaker_attendee_id?: string | null
+          speaker_name: string
+          status?: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          meeting_id?: string
+          source?: string
+          speaker_attendee_id?: string | null
+          speaker_name?: string
+          status?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_commitments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_commitments_speaker_attendee_id_fkey"
+            columns: ["speaker_attendee_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_attendees"
             referencedColumns: ["id"]
           },
         ]
@@ -147,6 +290,98 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "meeting_messages_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_poll_votes: {
+        Row: {
+          attendee_id: string
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          voter_name: string
+        }
+        Insert: {
+          attendee_id: string
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          voter_name: string
+        }
+        Update: {
+          attendee_id?: string
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          voter_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_poll_votes_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_polls: {
+        Row: {
+          anonymous: boolean
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          creator_name: string
+          expires_at: string | null
+          id: string
+          meeting_id: string
+          options: Json
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          anonymous?: boolean
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_name: string
+          expires_at?: string | null
+          id?: string
+          meeting_id: string
+          options: Json
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          anonymous?: boolean
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          creator_name?: string
+          expires_at?: string | null
+          id?: string
+          meeting_id?: string
+          options?: Json
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_polls_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "meetings"
