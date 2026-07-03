@@ -375,12 +375,19 @@ function Room({
   const reactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Live transcription (Web Speech API) — local participant only.
-  const { supported: sttSupported, interim: liveInterim } = useLiveTranscription({
+  const {
+    supported: sttSupported,
+    listening: sttListening,
+    interim: sttInterim,
+    lastFinal: sttLastFinal,
+    error: sttError,
+  } = useLiveTranscription({
     meetingId: meeting.id,
     attendeeId,
     speakerName: guestName,
     enabled: true,
   });
+  const liveInterim = sttInterim || sttLastFinal;
   useEffect(() => {
     if (!sttSupported) {
       toast.message("Live captions unavailable in this browser", {
@@ -388,6 +395,13 @@ function Room({
       });
     }
   }, [sttSupported]);
+  useEffect(() => {
+    if (sttError === "not-allowed" || sttError === "service-not-allowed") {
+      toast.error("Microphone blocked for captions", {
+        description: "Allow mic access to enable live AI captions.",
+      });
+    }
+  }, [sttError]);
 
   // Timer
   useEffect(() => {
@@ -628,6 +642,16 @@ function Room({
           <span className="inline-flex items-center gap-1.5">
             <Circle className="size-2 fill-rose-400 text-rose-400 animate-rec-blink" />
             Recording in progress
+          </span>
+        </div>
+      )}
+
+      {/* Captions status banner (slim) */}
+      {sttSupported && (
+        <div className="shrink-0 bg-black/30 border-b border-[var(--border-soft)] text-[10px] uppercase tracking-widest text-muted-foreground text-center py-0.5 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`inline-block size-1.5 rounded-full ${sttListening ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+            {sttError ? `Captions: ${sttError}` : sttListening ? "Live AI captions on" : "Captions starting…"}
           </span>
         </div>
       )}
