@@ -375,12 +375,19 @@ function Room({
   const reactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Live transcription (Web Speech API) — local participant only.
-  const { supported: sttSupported, interim: liveInterim } = useLiveTranscription({
+  const {
+    supported: sttSupported,
+    listening: sttListening,
+    interim: sttInterim,
+    lastFinal: sttLastFinal,
+    error: sttError,
+  } = useLiveTranscription({
     meetingId: meeting.id,
     attendeeId,
     speakerName: guestName,
     enabled: true,
   });
+  const liveInterim = sttInterim || sttLastFinal;
   useEffect(() => {
     if (!sttSupported) {
       toast.message("Live captions unavailable in this browser", {
@@ -388,6 +395,13 @@ function Room({
       });
     }
   }, [sttSupported]);
+  useEffect(() => {
+    if (sttError === "not-allowed" || sttError === "service-not-allowed") {
+      toast.error("Microphone blocked for captions", {
+        description: "Allow mic access to enable live AI captions.",
+      });
+    }
+  }, [sttError]);
 
   // Timer
   useEffect(() => {
