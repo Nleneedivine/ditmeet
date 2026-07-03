@@ -8,7 +8,6 @@ interface Options {
   enabled: boolean;
 }
 
-// Minimal Web Speech API typings — avoids relying on lib.dom.d.ts variants.
 interface SpeechRecognitionAlt {
   results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
   resultIndex: number;
@@ -20,6 +19,7 @@ interface SpeechRecognitionLike {
   onresult: ((e: SpeechRecognitionAlt) => void) | null;
   onerror: ((e: { error?: string }) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
   start: () => void;
   stop: () => void;
 }
@@ -30,6 +30,7 @@ export interface LiveTranscriptionState {
   supported: boolean;
   listening: boolean;
   interim: string;
+  lastFinal: string;
   error: string | null;
 }
 
@@ -46,9 +47,11 @@ export function useLiveTranscription({
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");
+  const [lastFinal, setLastFinal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const stoppedRef = useRef(false);
+  const finalTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,6 +62,7 @@ export function useLiveTranscription({
     const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!Ctor) {
       setSupported(false);
+      console.warn("[captions] SpeechRecognition not available in this browser");
       return;
     }
     setSupported(true);
@@ -71,6 +75,12 @@ export function useLiveTranscription({
     recRef.current = rec;
     stoppedRef.current = false;
 
+    rec.onstart = () => {
+      console.info("[captions] recognition started");
+      setListening(true);
+      setError(null);
+    };
+
     rec.onresult = (event) => {
       let interimText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -78,16 +88,24 @@ export function useLiveTranscription({
         const transcript = res[0].transcript.trim();
         if (!transcript) continue;
         if (res.isFinal) {
-          // Persist final transcript line
-          void supabase.from("meeting_transcripts").insert({
-            meeting_id: meetingId,
-            attendee_id: attendeeId,
-            speaker_name: speakerName,
-            text: transcript,
-            is_interim: false,
-            started_at: new Date().toISOString(),
-            ended_at: new Date().toISOString(),
-          });
+          console.info("[captions] final:", transcript);
+          setLastFinal(transcript);
+          if (finalTimerRef.current) window.clearTimeout(finalTimerRef.current);
+          finalTimerRef.current = window.setTimeout(() => setLastFinal(""), 6000);
+          void supabase
+            .from("meeting_transcripts")
+            .insert({
+              meeting_id: meetingId,
+              attendee_id: attendeeId,
+              speaker_name: speakerName,
+              text: transcript,
+              is_interim: false,
+              started_at: new Date().toISOString(),
+              ended_at: new Date().toISOString(),
+            })
+            .then(({ error: insErr }) => {
+              if (insErr) console.error("[captions] insert failed:", insErr);
+            });
         } else {
           interimText += transcript + " ";
         }
@@ -96,31 +114,38 @@ export function useLiveTranscription({
     };
 
     rec.onerror = (e) => {
-      setError(e?.error || "transcription-error");
+      const err = e?.error || "transcription-error";
+      console.warn("[captions] error:", err);
+      if (err === "no-speech" || err === "aborted") return; // benign
+      setError(err);
     };
 
     rec.onend = () => {
+      console.info("[captions] recognition ended (auto-restart:", !stoppedRef.current, ")");
       setListening(false);
-      // Browsers auto-stop after silence — restart unless we deliberately stopped.
       if (!stoppedRef.current) {
-        try {
-          rec.start();
-          setListening(true);
-        } catch {
-          /* noop */
-        }
+        window.setTimeout(() => {
+          if (stoppedRef.current) return;
+          try {
+            rec.start();
+          } catch (err) {
+            console.warn("[captions] restart failed:", err);
+          }
+        }, 250);
       }
     };
 
     try {
       rec.start();
-      setListening(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could-not-start");
+      const msg = e instanceof Error ? e.message : "could-not-start";
+      console.error("[captions] start threw:", msg);
+      setError(msg);
     }
 
     return () => {
       stoppedRef.current = true;
+      if (finalTimerRef.current) window.clearTimeout(finalTimerRef.current);
       try {
         rec.stop();
       } catch {
@@ -129,8 +154,9 @@ export function useLiveTranscription({
       recRef.current = null;
       setListening(false);
       setInterim("");
+      setLastFinal("");
     };
   }, [meetingId, attendeeId, speakerName, enabled]);
 
-  return { supported, listening, interim, error };
+  return { supported, listening, interim, lastFinal, error };
 }
