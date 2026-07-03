@@ -646,6 +646,16 @@ function Room({
         </div>
       )}
 
+      {/* Captions status banner (slim) */}
+      {sttSupported && (
+        <div className="shrink-0 bg-black/30 border-b border-[var(--border-soft)] text-[10px] uppercase tracking-widest text-muted-foreground text-center py-0.5 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`inline-block size-1.5 rounded-full ${sttListening ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+            {sttError ? `Captions: ${sttError}` : sttListening ? "Live AI captions on" : "Captions starting…"}
+          </span>
+        </div>
+      )}
+
       {/* Body — flex-1 with min-h-0 so children don't blow out the height */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
         <main className="flex-1 p-2 md:p-4 overflow-hidden relative min-w-0 flex flex-col">
