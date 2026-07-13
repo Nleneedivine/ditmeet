@@ -725,6 +725,12 @@ function Room({
             <ChatPanel messages={messages} draft={draft} setDraft={setDraft} onSend={sendMessage} me={guestName} />
           </Sidebar>
         )}
+
+        {showStageB && (
+          <Sidebar title="Agenda & AI" icon={<Sparkles className="size-4" />} onClose={() => setShowStageB(false)}>
+            <StageBPanel meetingId={meeting.id} attendeeId={attendeeId} guestName={guestName} isOwner={isOwner} />
+          </Sidebar>
+        )}
       </div>
 
       {/* Controls — pinned bottom, scrollable horizontally on tiny screens */}
