@@ -362,6 +362,7 @@ function Room({
   const [elapsed, setElapsed] = useState(0);
   const [showChat, setShowChat] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
+  const [showStageB, setShowStageB] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [attendees, setAttendees] = useState<AttendeeRow[]>([]);
