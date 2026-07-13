@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { createDailyMeetingToken } from "@/lib/daily.functions";
 import { useLiveTranscription } from "@/hooks/use-live-transcription";
 import { CaptionStrip } from "@/components/meetings/CaptionStrip";
+import { StageBPanel } from "@/components/meetings/StageBPanel";
 import { generateMeetingSummary } from "@/lib/summary.functions";
 import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
@@ -361,6 +362,7 @@ function Room({
   const [elapsed, setElapsed] = useState(0);
   const [showChat, setShowChat] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
+  const [showStageB, setShowStageB] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [attendees, setAttendees] = useState<AttendeeRow[]>([]);
@@ -723,6 +725,12 @@ function Room({
             <ChatPanel messages={messages} draft={draft} setDraft={setDraft} onSend={sendMessage} me={guestName} />
           </Sidebar>
         )}
+
+        {showStageB && (
+          <Sidebar title="Agenda & AI" icon={<Sparkles className="size-4" />} onClose={() => setShowStageB(false)}>
+            <StageBPanel meetingId={meeting.id} attendeeId={attendeeId} guestName={guestName} isOwner={isOwner} />
+          </Sidebar>
+        )}
       </div>
 
       {/* Controls — pinned bottom, scrollable horizontally on tiny screens */}
@@ -757,8 +765,9 @@ function Room({
         </Popover>
 
         <div className="w-px h-7 bg-border mx-1 hidden md:block" />
-        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) setShowChat(false); }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
-        <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) setShowPeople(false); }} label="Chat" icon={<MessageSquare className="size-5" />} />
+        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) { setShowChat(false); setShowStageB(false); } }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
+        <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) { setShowPeople(false); setShowStageB(false); } }} label="Chat" icon={<MessageSquare className="size-5" />} />
+        <ControlButton active={showStageB} onClick={() => { setShowStageB((v) => !v); if (!showStageB) { setShowPeople(false); setShowChat(false); } }} label="Agenda & AI" icon={<Sparkles className="size-5" />} />
 
         {isOwner && (
           <>
