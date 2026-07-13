@@ -765,7 +765,7 @@ function Room({
         </Popover>
 
         <div className="w-px h-7 bg-border mx-1 hidden md:block" />
-        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) setShowChat(false); }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
+        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) { setShowChat(false); setShowStageB(false); } }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
         <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) { setShowPeople(false); setShowStageB(false); } }} label="Chat" icon={<MessageSquare className="size-5" />} />
         <ControlButton active={showStageB} onClick={() => { setShowStageB((v) => !v); if (!showStageB) { setShowPeople(false); setShowChat(false); } }} label="Agenda & AI" icon={<Sparkles className="size-5" />} />
 
