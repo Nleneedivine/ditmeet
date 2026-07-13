@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { createDailyMeetingToken } from "@/lib/daily.functions";
 import { useLiveTranscription } from "@/hooks/use-live-transcription";
 import { CaptionStrip } from "@/components/meetings/CaptionStrip";
+import { StageBPanel } from "@/components/meetings/StageBPanel";
 import { generateMeetingSummary } from "@/lib/summary.functions";
 import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
