@@ -775,7 +775,7 @@ function CommitmentsTab({
         <Textarea
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          placeholder='Log a commitment (e.g., "I\'ll send the deck by Friday")'
+          placeholder={`Log a commitment (e.g., "I'll send the deck by Friday")`}
           className="bg-white/5 border-border text-sm min-h-[64px]"
         />
         <GoldButton size="sm" onClick={addManual} className="self-start">
