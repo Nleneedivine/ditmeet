@@ -184,5 +184,54 @@ export const approveMeetingSummary = createServerFn({ method: "POST" })
       .eq("meeting_id", data.meetingId);
     if (error) throw new Error(error.message);
 
+    // Append the approved summary to the collaborative meeting notes.
+    try {
+      const { data: row } = await supabase
+        .from("meeting_summaries")
+        .select("content")
+        .eq("meeting_id", data.meetingId)
+        .maybeSingle();
+      const content = (row?.content ?? {}) as Partial<GeneratedSummary>;
+      const esc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const parts: string[] = ['<h2>AI Summary</h2>'];
+      if (content.overview) parts.push(`<p>${esc(content.overview)}</p>`);
+      if (content.key_points?.length)
+        parts.push(
+          `<h2>Key points</h2><ul>${content.key_points.map((k) => `<li>${esc(k)}</li>`).join("")}</ul>`,
+        );
+      if (content.decisions?.length)
+        parts.push(
+          `<h2>Decisions</h2><ul>${content.decisions.map((k) => `<li>${esc(k)}</li>`).join("")}</ul>`,
+        );
+      if (content.action_items?.length)
+        parts.push(
+          `<h2>Action items</h2><ul>${content.action_items
+            .map((a) => `<li><strong>${esc(a.owner)}</strong>: ${esc(a.text)}${a.due ? ` (${esc(a.due)})` : ""}</li>`)
+            .join("")}</ul>`,
+        );
+      const html = parts.join("");
+
+      const { data: note } = await supabase
+        .from("meeting_notes")
+        .select("id, content_html")
+        .eq("meeting_id", data.meetingId)
+        .maybeSingle();
+      if (note) {
+        if (!(note.content_html ?? "").includes("<h2>AI Summary</h2>")) {
+          await supabase
+            .from("meeting_notes")
+            .update({ content_html: `${note.content_html ?? ""}${html}`, updated_by_name: "AI Summary" })
+            .eq("id", note.id);
+        }
+      } else {
+        await supabase
+          .from("meeting_notes")
+          .insert({ meeting_id: data.meetingId, content_html: html, updated_by_name: "AI Summary" });
+      }
+    } catch (e) {
+      console.error("Appending summary to notes failed:", e);
+    }
+
     return { ok: true };
   });
