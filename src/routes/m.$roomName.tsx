@@ -27,6 +27,7 @@ import {
   Monitor,
   MonitorOff,
   MoreVertical,
+  NotebookPen,
   PartyPopper,
   Pencil,
   Pin,
@@ -49,19 +50,21 @@ import { createDailyMeetingToken } from "@/lib/daily.functions";
 import { useLiveTranscription } from "@/hooks/use-live-transcription";
 import { CaptionStrip } from "@/components/meetings/CaptionStrip";
 import { StageBPanel } from "@/components/meetings/StageBPanel";
+import { ResourcesPanel } from "@/components/meetings/ResourcesPanel";
 import { generateMeetingSummary } from "@/lib/summary.functions";
-import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
+import {
+  computeSummary,
+  downloadAttendanceCSV,
+  durationLabel,
+  type AttendanceRow,
+} from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
 import { GoldButton } from "@/components/brand/GoldButton";
 import { VelvetCard } from "@/components/brand/VelvetCard";
 import { ThemeToggle } from "@/components/brand/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/m/$roomName")({ component: MeetingPage });
 
@@ -120,7 +123,9 @@ function MeetingPage() {
     (async () => {
       const { data, error } = await supabase
         .from("meetings")
-        .select("id, title, room_url, room_name, host_id, waiting_room_enabled, recording_started_at, ended_at")
+        .select(
+          "id, title, room_url, room_name, host_id, waiting_room_enabled, recording_started_at, ended_at",
+        )
         .eq("room_name", roomName)
         .maybeSingle();
       if (error || !data) {
@@ -133,7 +138,8 @@ function MeetingPage() {
 
   // Prefill identity for signed-in users
   useEffect(() => {
-    if (user && !name) setName((user.user_metadata?.full_name as string) ?? user.email?.split("@")[0] ?? "");
+    if (user && !name)
+      setName((user.user_metadata?.full_name as string) ?? user.email?.split("@")[0] ?? "");
     if (user?.email && !email) setEmail(user.email);
   }, [user, name, email]);
 
@@ -144,7 +150,12 @@ function MeetingPage() {
       .channel(`att:${attendeeId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "meeting_attendees", filter: `id=eq.${attendeeId}` },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "meeting_attendees",
+          filter: `id=eq.${attendeeId}`,
+        },
         async (payload) => {
           const row = payload.new as { status: string };
           if (row.status === "admitted") {
@@ -248,7 +259,9 @@ function MeetingPage() {
         <VelvetCard className="max-w-md text-center" glow="soft">
           <Logo size="md" />
           <p className="mt-4 text-foreground">{loadError}</p>
-          <GoldButton className="mt-6" onClick={() => navigate({ to: "/" })}>Back home</GoldButton>
+          <GoldButton className="mt-6" onClick={() => navigate({ to: "/" })}>
+            Back home
+          </GoldButton>
         </VelvetCard>
       </div>
     );
@@ -263,7 +276,9 @@ function MeetingPage() {
   }
 
   if (summary) {
-    return <SummaryCard meeting={meeting} rows={summary.rows} onClose={() => navigate({ to: "/" })} />;
+    return (
+      <SummaryCard meeting={meeting} rows={summary.rows} onClose={() => navigate({ to: "/" })} />
+    );
   }
 
   if (waiting) {
@@ -288,18 +303,36 @@ function MeetingPage() {
           <div className="text-center mb-6">
             <Logo size="md" />
             <h1 className="font-display text-2xl text-gold mt-3">{meeting.title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Enter your details to join the room.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Enter your details to join the room.
+            </p>
           </div>
           <div className="space-y-4">
             <div>
               <Label>Full name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Ada Lovelace" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+                placeholder="Ada Lovelace"
+              />
             </div>
             <div>
               <Label>Email</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} placeholder="ada@example.com" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                maxLength={120}
+                placeholder="ada@example.com"
+              />
             </div>
-            <GoldButton size="lg" className="w-full" onClick={handleJoin} disabled={!name.trim() || !email.trim() || joining}>
+            <GoldButton
+              size="lg"
+              className="w-full"
+              onClick={handleJoin}
+              disabled={!name.trim() || !email.trim() || joining}
+            >
               {joining ? "Stepping on stage…" : "Step on stage"}
             </GoldButton>
           </div>
@@ -363,6 +396,7 @@ function Room({
   const [showChat, setShowChat] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [showStageB, setShowStageB] = useState(false);
+  const [showResources, setShowResources] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [attendees, setAttendees] = useState<AttendeeRow[]>([]);
@@ -415,8 +449,16 @@ function Room({
   useEffect(() => {
     (async () => {
       const [msgsRes, attRes, tmrRes] = await Promise.all([
-        supabase.from("meeting_messages").select("*").eq("meeting_id", meeting.id).order("created_at", { ascending: true }).limit(200),
-        supabase.from("meeting_attendees").select("id, meeting_id, full_name, email, joined_at, left_at, status, is_admin").eq("meeting_id", meeting.id),
+        supabase
+          .from("meeting_messages")
+          .select("*")
+          .eq("meeting_id", meeting.id)
+          .order("created_at", { ascending: true })
+          .limit(200),
+        supabase
+          .from("meeting_attendees")
+          .select("id, meeting_id, full_name, email, joined_at, left_at, status, is_admin")
+          .eq("meeting_id", meeting.id),
         supabase.from("meeting_speaker_timers").select("*").eq("meeting_id", meeting.id),
       ]);
       setMessages((msgsRes.data ?? []) as ChatMessage[]);
@@ -426,32 +468,70 @@ function Room({
 
     const ch = supabase
       .channel(`meet:${meeting.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "meeting_messages", filter: `meeting_id=eq.${meeting.id}` },
-        (p) => setMessages((m) => [...m, p.new as ChatMessage]))
-      .on("postgres_changes", { event: "*", schema: "public", table: "meeting_attendees", filter: `meeting_id=eq.${meeting.id}` },
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "meeting_messages",
+          filter: `meeting_id=eq.${meeting.id}`,
+        },
+        (p) => setMessages((m) => [...m, p.new as ChatMessage]),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "meeting_attendees",
+          filter: `meeting_id=eq.${meeting.id}`,
+        },
         (p) => {
           setAttendees((prev) => {
             if (p.eventType === "INSERT") return [...prev, p.new as AttendeeRow];
-            if (p.eventType === "UPDATE") return prev.map((r) => (r.id === (p.new as AttendeeRow).id ? (p.new as AttendeeRow) : r));
-            if (p.eventType === "DELETE") return prev.filter((r) => r.id !== (p.old as AttendeeRow).id);
+            if (p.eventType === "UPDATE")
+              return prev.map((r) =>
+                r.id === (p.new as AttendeeRow).id ? (p.new as AttendeeRow) : r,
+              );
+            if (p.eventType === "DELETE")
+              return prev.filter((r) => r.id !== (p.old as AttendeeRow).id);
             return prev;
           });
           // Self was kicked
-          if (p.eventType === "UPDATE" && (p.new as AttendeeRow).id === attendeeId && (p.new as AttendeeRow).status === "removed") {
+          if (
+            p.eventType === "UPDATE" &&
+            (p.new as AttendeeRow).id === attendeeId &&
+            (p.new as AttendeeRow).status === "removed"
+          ) {
             toast.error("You were removed from the meeting by the host.");
             onLeave();
           }
-        })
-      .on("postgres_changes", { event: "*", schema: "public", table: "meeting_speaker_timers", filter: `meeting_id=eq.${meeting.id}` },
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "meeting_speaker_timers",
+          filter: `meeting_id=eq.${meeting.id}`,
+        },
         (p) => {
           setTimers((prev) => {
             if (p.eventType === "INSERT") return [...prev, p.new as SpeakerTimer];
-            if (p.eventType === "DELETE") return prev.filter((t) => t.id !== (p.old as SpeakerTimer).id);
-            if (p.eventType === "UPDATE") return prev.map((t) => (t.id === (p.new as SpeakerTimer).id ? (p.new as SpeakerTimer) : t));
+            if (p.eventType === "DELETE")
+              return prev.filter((t) => t.id !== (p.old as SpeakerTimer).id);
+            if (p.eventType === "UPDATE")
+              return prev.map((t) =>
+                t.id === (p.new as SpeakerTimer).id ? (p.new as SpeakerTimer) : t,
+              );
             return prev;
           });
-        })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "meetings", filter: `id=eq.${meeting.id}` },
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "meetings", filter: `id=eq.${meeting.id}` },
         (p) => {
           const m = p.new as { recording_started_at: string | null; ended_at: string | null };
           setRecording(!!m.recording_started_at);
@@ -459,14 +539,19 @@ function Room({
             toast.message("The host ended the meeting.");
             onLeave();
           }
-        })
+        },
+      )
       .subscribe();
 
     // Broadcast channel for reactions, spotlight, screenshare requests
     const bc = supabase
       .channel(`bc:${meeting.id}`, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: "reaction" }, ({ payload }) => {
-        const r: FloatingReaction = { id: crypto.randomUUID(), emoji: payload.emoji, x: Math.random() * 80 + 10 };
+        const r: FloatingReaction = {
+          id: crypto.randomUUID(),
+          emoji: payload.emoji,
+          x: Math.random() * 80 + 10,
+        };
         setReactions((arr) => [...arr, r]);
         setTimeout(() => setReactions((arr) => arr.filter((x) => x.id !== r.id)), 2400);
       })
@@ -520,16 +605,25 @@ function Room({
   const raiseHand = async () => {
     const me = attendees.find((a) => a.id === attendeeId);
     const newVal = me?.hand_raised_at ? null : new Date().toISOString();
-    await supabase.from("meeting_attendees").update({ hand_raised_at: newVal }).eq("id", attendeeId);
+    await supabase
+      .from("meeting_attendees")
+      .update({ hand_raised_at: newVal })
+      .eq("id", attendeeId);
     toast.message(newVal ? "Hand raised ✋" : "Hand lowered");
   };
-  const myHandRaised = !!(attendees.find((a) => a.id === attendeeId) as AttendeeRow & { hand_raised_at?: string | null })?.hand_raised_at;
+  const myHandRaised = !!(
+    attendees.find((a) => a.id === attendeeId) as AttendeeRow & { hand_raised_at?: string | null }
+  )?.hand_raised_at;
 
   const toggleBlur = async () => {
     if (!daily) return;
     try {
       await daily.updateInputSettings({
-        video: { processor: blurOn ? { type: "none" } : { type: "background-blur", config: { strength: 0.5 } } },
+        video: {
+          processor: blurOn
+            ? { type: "none" }
+            : { type: "background-blur", config: { strength: 0.5 } },
+        },
       });
       setBlurOn((v) => !v);
     } catch {
@@ -546,7 +640,9 @@ function Room({
       });
       const mr = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9,opus" });
       chunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/webm" });
         const url = URL.createObjectURL(blob);
@@ -559,7 +655,10 @@ function Room({
       };
       mr.start(1000);
       mediaRecorderRef.current = mr;
-      await supabase.from("meetings").update({ recording_started_at: new Date().toISOString() }).eq("id", meeting.id);
+      await supabase
+        .from("meetings")
+        .update({ recording_started_at: new Date().toISOString() })
+        .eq("id", meeting.id);
       toast.success("Recording started — saved to your device.");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Recording was not permitted.");
@@ -575,16 +674,25 @@ function Room({
   // End meeting for all
   const endForAll = async () => {
     if (!confirm("End the meeting for everyone?")) return;
-    await supabase.from("meetings").update({ ended_at: new Date().toISOString(), status: "ended" }).eq("id", meeting.id);
+    await supabase
+      .from("meetings")
+      .update({ ended_at: new Date().toISOString(), status: "ended" })
+      .eq("id", meeting.id);
     // Eject all (only works as owner)
     if (daily) {
       const updates: Record<string, { eject: true }> = {};
       for (const id of participantIds) if (id !== localId) updates[id] = { eject: true };
-      try { await daily.updateParticipants(updates); } catch { /* noop */ }
+      try {
+        await daily.updateParticipants(updates);
+      } catch {
+        /* noop */
+      }
     }
     // Kick off AI summary in background (host only)
     if (isOwner) {
-      toast.message("Generating AI summary…", { description: "It will appear in your dashboard under Pending Review." });
+      toast.message("Generating AI summary…", {
+        description: "It will appear in your dashboard under Pending Review.",
+      });
       generateMeetingSummary({ data: { meetingId: meeting.id } })
         .then(() => toast.success("Summary ready for review"))
         .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Summary failed"));
@@ -594,7 +702,10 @@ function Room({
 
   // Speaker-timer enforcement on the targeted client
   const myAttendee = attendees.find((a) => a.id === attendeeId);
-  const myTimer = useMemo(() => timers.find((t) => t.attendee_id === attendeeId), [timers, attendeeId]);
+  const myTimer = useMemo(
+    () => timers.find((t) => t.attendee_id === attendeeId),
+    [timers, attendeeId],
+  );
   useEffect(() => {
     if (!myTimer) return;
     const ends = new Date(myTimer.started_at).getTime() + myTimer.seconds * 1000;
@@ -612,8 +723,18 @@ function Room({
 
   const waitingList = attendees.filter((a) => a.status === "waiting");
   const handsUp = attendees
-    .filter((a) => (a as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at && a.status === "admitted")
-    .sort((a, b) => new Date((a as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at!).getTime() - new Date((b as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at!).getTime());
+    .filter(
+      (a) =>
+        (a as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at &&
+        a.status === "admitted",
+    )
+    .sort(
+      (a, b) =>
+        new Date(
+          (a as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at!,
+        ).getTime() -
+        new Date((b as AttendeeRow & { hand_raised_at?: string | null }).hand_raised_at!).getTime(),
+    );
 
   // Auto-spotlight any active screen share
   const screenOwnerId = screens[0]?.session_id;
@@ -626,7 +747,8 @@ function Room({
         <Logo size="sm" />
         <div className="flex-1 min-w-0 text-center">
           <div className="text-[10px] uppercase tracking-[0.3em] text-rainbow font-semibold truncate">
-            {meeting.title}{isOwner && " · Host"}
+            {meeting.title}
+            {isOwner && " · Host"}
           </div>
           <div className="font-display text-lg md:text-xl text-gold tabular-nums pulse-gold leading-tight">
             {formatDuration(elapsed)}
@@ -652,8 +774,14 @@ function Room({
       {sttSupported && (
         <div className="shrink-0 bg-black/30 border-b border-[var(--border-soft)] text-[10px] uppercase tracking-widest text-muted-foreground text-center py-0.5 backdrop-blur-sm">
           <span className="inline-flex items-center gap-1.5">
-            <span className={`inline-block size-1.5 rounded-full ${sttListening ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-            {sttError ? `Captions: ${sttError}` : sttListening ? "Live AI captions on" : "Captions starting…"}
+            <span
+              className={`inline-block size-1.5 rounded-full ${sttListening ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}
+            />
+            {sttError
+              ? `Captions: ${sttError}`
+              : sttListening
+                ? "Live AI captions on"
+                : "Captions starting…"}
           </span>
         </div>
       )}
@@ -670,19 +798,46 @@ function Room({
               isOwner={isOwner}
               meetingId={meeting.id}
               liveInterim={liveInterim}
-              onSpotlight={(id) => reactionChannelRef.current?.send({ type: "broadcast", event: "spotlight", payload: { id } })}
+              onSpotlight={(id) =>
+                reactionChannelRef.current?.send({
+                  type: "broadcast",
+                  event: "spotlight",
+                  payload: { id },
+                })
+              }
               onMute={(sid) => daily?.updateParticipant(sid, { setAudio: false })}
               onEject={async (sid, attId) => {
-                try { await daily?.updateParticipant(sid, { eject: true }); } catch { /* noop */ }
-                if (attId) await supabase.from("meeting_attendees").update({ status: "removed", left_at: new Date().toISOString() }).eq("id", attId);
+                try {
+                  await daily?.updateParticipant(sid, { eject: true });
+                } catch {
+                  /* noop */
+                }
+                if (attId)
+                  await supabase
+                    .from("meeting_attendees")
+                    .update({ status: "removed", left_at: new Date().toISOString() })
+                    .eq("id", attId);
               }}
               onTimer={async (attId, seconds) => {
-                await supabase.from("meeting_speaker_timers").delete().eq("meeting_id", meeting.id).eq("attendee_id", attId);
-                await supabase.from("meeting_speaker_timers").insert({ meeting_id: meeting.id, attendee_id: attId, seconds, created_by: meeting.host_id });
+                await supabase
+                  .from("meeting_speaker_timers")
+                  .delete()
+                  .eq("meeting_id", meeting.id)
+                  .eq("attendee_id", attId);
+                await supabase.from("meeting_speaker_timers").insert({
+                  meeting_id: meeting.id,
+                  attendee_id: attId,
+                  seconds,
+                  created_by: meeting.host_id,
+                });
                 toast.success(`Timer set: ${seconds}s`);
               }}
               onRequestShare={(sid) => {
-                reactionChannelRef.current?.send({ type: "broadcast", event: "request-share", payload: { targetSessionId: sid } });
+                reactionChannelRef.current?.send({
+                  type: "broadcast",
+                  event: "request-share",
+                  payload: { targetSessionId: sid },
+                });
                 toast.message("Screen-share request sent.");
               }}
               annotating={annotating}
@@ -704,14 +859,21 @@ function Room({
         </main>
 
         {showPeople && (
-          <Sidebar title={`Participants (${attendees.filter((a) => a.status === "admitted").length})`} icon={<Users className="size-4" />} onClose={() => setShowPeople(false)}>
+          <Sidebar
+            title={`Participants (${attendees.filter((a) => a.status === "admitted").length})`}
+            icon={<Users className="size-4" />}
+            onClose={() => setShowPeople(false)}
+          >
             <PeoplePanel
               attendees={attendees}
               waitingList={waitingList}
               handsUp={handsUp}
               isOwner={isOwner}
               onAdmit={async (id) => {
-                await supabase.from("meeting_attendees").update({ status: "admitted" }).eq("id", id);
+                await supabase
+                  .from("meeting_attendees")
+                  .update({ status: "admitted" })
+                  .eq("id", id);
               }}
               onDeny={async (id) => {
                 await supabase.from("meeting_attendees").update({ status: "denied" }).eq("id", id);
@@ -721,53 +883,183 @@ function Room({
         )}
 
         {showChat && (
-          <Sidebar title="Chat" icon={<MessageSquare className="size-4" />} onClose={() => setShowChat(false)}>
-            <ChatPanel messages={messages} draft={draft} setDraft={setDraft} onSend={sendMessage} me={guestName} />
+          <Sidebar
+            title="Chat"
+            icon={<MessageSquare className="size-4" />}
+            onClose={() => setShowChat(false)}
+          >
+            <ChatPanel
+              messages={messages}
+              draft={draft}
+              setDraft={setDraft}
+              onSend={sendMessage}
+              me={guestName}
+            />
           </Sidebar>
         )}
 
         {showStageB && (
-          <Sidebar title="Agenda & AI" icon={<Sparkles className="size-4" />} onClose={() => setShowStageB(false)}>
-            <StageBPanel meetingId={meeting.id} attendeeId={attendeeId} guestName={guestName} isOwner={isOwner} />
+          <Sidebar
+            title="Agenda & AI"
+            icon={<Sparkles className="size-4" />}
+            onClose={() => setShowStageB(false)}
+          >
+            <StageBPanel
+              meetingId={meeting.id}
+              attendeeId={attendeeId}
+              guestName={guestName}
+              isOwner={isOwner}
+            />
+          </Sidebar>
+        )}
+
+        {showResources && (
+          <Sidebar
+            title="Resources"
+            icon={<NotebookPen className="size-4" />}
+            onClose={() => setShowResources(false)}
+          >
+            <ResourcesPanel
+              meetingId={meeting.id}
+              guestName={guestName}
+              isOwner={isOwner}
+              attendees={attendees
+                .filter((a) => a.status === "admitted")
+                .map((a) => ({ id: a.id, full_name: a.full_name }))}
+              onOpenAgendaPanel={() => {
+                setShowResources(false);
+                setShowStageB(true);
+              }}
+              onMention={(_id, name) => toast.message(`Mentioned ${name}`)}
+            />
           </Sidebar>
         )}
       </div>
 
       {/* Controls — pinned bottom, scrollable horizontally on tiny screens */}
       <footer className="shrink-0 px-2 md:px-4 py-2 flex items-center justify-center gap-2 border-t border-[var(--border-soft)] bg-card-velvet overflow-x-auto">
-        <ControlButton active={micOn} offAlert onClick={toggleMic} label={micOn ? "Mute" : "Unmute"} icon={micOn ? <Mic className="size-5" /> : <MicOff className="size-5" />} />
-        <ControlButton active={camOn} offAlert onClick={toggleCam} label={camOn ? "Camera off" : "Camera on"} icon={camOn ? <VideoIcon className="size-5" /> : <VideoOff className="size-5" />} />
+        <ControlButton
+          active={micOn}
+          offAlert
+          onClick={toggleMic}
+          label={micOn ? "Mute" : "Unmute"}
+          icon={micOn ? <Mic className="size-5" /> : <MicOff className="size-5" />}
+        />
+        <ControlButton
+          active={camOn}
+          offAlert
+          onClick={toggleCam}
+          label={camOn ? "Camera off" : "Camera on"}
+          icon={camOn ? <VideoIcon className="size-5" /> : <VideoOff className="size-5" />}
+        />
         <ControlButton
           active={isSharingScreen}
           onClick={() => (isSharingScreen ? stopScreenShare() : startScreenShare())}
           label={isSharingScreen ? "Stop sharing" : "Share screen"}
-          icon={isSharingScreen ? <MonitorOff className="size-5" /> : <Monitor className="size-5" />}
+          icon={
+            isSharingScreen ? <MonitorOff className="size-5" /> : <Monitor className="size-5" />
+          }
         />
         {(isSharingScreen || screenOwnerId) && (
-          <ControlButton active={annotating} onClick={() => setAnnotating((v) => !v)} label="Annotate" icon={<Pencil className="size-5" />} />
+          <ControlButton
+            active={annotating}
+            onClick={() => setAnnotating((v) => !v)}
+            label="Annotate"
+            icon={<Pencil className="size-5" />}
+          />
         )}
-        <ControlButton active={blurOn} onClick={toggleBlur} label="Blur background" icon={<Wand2 className="size-5" />} />
-        <ControlButton active={myHandRaised} onClick={raiseHand} label="Raise hand" icon={<Hand className={`size-5 ${myHandRaised ? "animate-hand-wave" : ""}`} />} />
+        <ControlButton
+          active={blurOn}
+          onClick={toggleBlur}
+          label="Blur background"
+          icon={<Wand2 className="size-5" />}
+        />
+        <ControlButton
+          active={myHandRaised}
+          onClick={raiseHand}
+          label="Raise hand"
+          icon={<Hand className={`size-5 ${myHandRaised ? "animate-hand-wave" : ""}`} />}
+        />
 
         <Popover>
           <PopoverTrigger asChild>
-            <button title="React" aria-label="React" className="relative inline-flex flex-col items-center justify-center size-11 md:size-12 rounded-xl border border-[var(--border-soft)] bg-[color:var(--accent)]/5 text-foreground/85 hover:text-foreground hover:bg-[color:var(--accent)]/15 transition-all shrink-0">
+            <button
+              title="React"
+              aria-label="React"
+              className="relative inline-flex flex-col items-center justify-center size-11 md:size-12 rounded-xl border border-[var(--border-soft)] bg-[color:var(--accent)]/5 text-foreground/85 hover:text-foreground hover:bg-[color:var(--accent)]/15 transition-all shrink-0"
+            >
               <PartyPopper className="size-5" />
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-2 bg-card-velvet border-gold">
             <div className="flex gap-1">
               {REACTION_EMOJIS.map((e) => (
-                <button key={e} onClick={() => sendReaction(e)} className="text-2xl hover:scale-125 transition-transform p-1">{e}</button>
+                <button
+                  key={e}
+                  onClick={() => sendReaction(e)}
+                  className="text-2xl hover:scale-125 transition-transform p-1"
+                >
+                  {e}
+                </button>
               ))}
             </div>
           </PopoverContent>
         </Popover>
 
         <div className="w-px h-7 bg-border mx-1 hidden md:block" />
-        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) { setShowChat(false); setShowStageB(false); } }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
-        <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) { setShowPeople(false); setShowStageB(false); } }} label="Chat" icon={<MessageSquare className="size-5" />} />
-        <ControlButton active={showStageB} onClick={() => { setShowStageB((v) => !v); if (!showStageB) { setShowPeople(false); setShowChat(false); } }} label="Agenda & AI" icon={<Sparkles className="size-5" />} />
+        <ControlButton
+          active={showPeople}
+          onClick={() => {
+            setShowPeople((v) => !v);
+            if (!showPeople) {
+              setShowChat(false);
+              setShowStageB(false);
+              setShowResources(false);
+            }
+          }}
+          label="People"
+          icon={<Users className="size-5" />}
+          badge={waitingList.length || handsUp.length}
+        />
+        <ControlButton
+          active={showChat}
+          onClick={() => {
+            setShowChat((v) => !v);
+            if (!showChat) {
+              setShowPeople(false);
+              setShowStageB(false);
+              setShowResources(false);
+            }
+          }}
+          label="Chat"
+          icon={<MessageSquare className="size-5" />}
+        />
+        <ControlButton
+          active={showStageB}
+          onClick={() => {
+            setShowStageB((v) => !v);
+            if (!showStageB) {
+              setShowPeople(false);
+              setShowChat(false);
+              setShowResources(false);
+            }
+          }}
+          label="Agenda & AI"
+          icon={<Sparkles className="size-5" />}
+        />
+        <ControlButton
+          active={showResources}
+          onClick={() => {
+            setShowResources((v) => !v);
+            if (!showResources) {
+              setShowPeople(false);
+              setShowChat(false);
+              setShowStageB(false);
+            }
+          }}
+          label="Resources"
+          icon={<NotebookPen className="size-5" />}
+        />
 
         {isOwner && (
           <>
@@ -776,7 +1068,13 @@ function Room({
               active={recording}
               onClick={recording ? stopRecording : startRecording}
               label={recording ? "Stop recording" : "Record"}
-              icon={recording ? <Square className="size-5 fill-rose-400 text-rose-400" /> : <Circle className="size-5" />}
+              icon={
+                recording ? (
+                  <Square className="size-5 fill-rose-400 text-rose-400" />
+                ) : (
+                  <Circle className="size-5" />
+                )
+              }
             />
             <GoldButton variant="outline" size="sm" onClick={endForAll}>
               <Trash2 className="size-4" /> <span className="hidden md:inline">End for all</span>
@@ -795,7 +1093,21 @@ function Room({
 
 /* ───────────────── Sub-components ───────────────── */
 
-function ControlButton({ active, onClick, label, icon, badge, offAlert }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode; badge?: number; offAlert?: boolean }) {
+function ControlButton({
+  active,
+  onClick,
+  label,
+  icon,
+  badge,
+  offAlert,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon: React.ReactNode;
+  badge?: number;
+  offAlert?: boolean;
+}) {
   const stateClass = active
     ? "border-[var(--border-strong)] bg-[color:var(--accent)]/15 text-foreground glow-accent-sm"
     : offAlert
@@ -848,7 +1160,18 @@ function ParticipantGrid({
   onRequestShare: (sessionId: string) => void;
   annotating: boolean;
 }) {
-  const common = { attendees, timers, isOwner, meetingId, liveInterim, onSpotlight, onMute, onEject, onTimer, onRequestShare };
+  const common = {
+    attendees,
+    timers,
+    isOwner,
+    meetingId,
+    liveInterim,
+    onSpotlight,
+    onMute,
+    onEject,
+    onTimer,
+    onRequestShare,
+  };
   // Spotlight layout: hero + thumbnails strip
   if (spotlightId && ids.includes(spotlightId)) {
     const others = ids.filter((id) => id !== spotlightId);
@@ -871,7 +1194,14 @@ function ParticipantGrid({
     );
   }
 
-  const cols = ids.length <= 1 ? "grid-cols-1" : ids.length <= 4 ? "grid-cols-1 md:grid-cols-2" : ids.length <= 9 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-3 md:grid-cols-4";
+  const cols =
+    ids.length <= 1
+      ? "grid-cols-1"
+      : ids.length <= 4
+        ? "grid-cols-1 md:grid-cols-2"
+        : ids.length <= 9
+          ? "grid-cols-2 md:grid-cols-3"
+          : "grid-cols-3 md:grid-cols-4";
   return (
     <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-fr h-full`}>
       {ids.map((id) => (
@@ -920,11 +1250,15 @@ function ParticipantTile({
     if (!userName) return undefined;
     return attendees.find((a) => a.full_name === userName && a.status === "admitted");
   }, [userName, attendees]);
-  const handRaised = !!(attendee as (AttendeeRow & { hand_raised_at?: string | null }) | undefined)?.hand_raised_at;
+  const handRaised = !!(attendee as (AttendeeRow & { hand_raised_at?: string | null }) | undefined)
+    ?.hand_raised_at;
   const timer = attendee ? timers.find((t) => t.attendee_id === attendee.id) : undefined;
   const [tRemaining, setTRemaining] = useState<number | null>(null);
   useEffect(() => {
-    if (!timer) { setTRemaining(null); return; }
+    if (!timer) {
+      setTRemaining(null);
+      return;
+    }
     const ends = new Date(timer.started_at).getTime() + timer.seconds * 1000;
     const tick = () => setTRemaining(Math.max(0, Math.ceil((ends - Date.now()) / 1000)));
     tick();
@@ -943,16 +1277,32 @@ function ParticipantTile({
 
   const initials = useMemo(() => {
     const n = (userName ?? "Guest").trim();
-    return n.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "G";
+    return (
+      n
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase() ?? "")
+        .join("") || "G"
+    );
   }, [userName]);
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden ${isSpotlight ? "border-gold-strong h-full" : "border-gold"} bg-[oklch(0.10_0.05_270)] animate-fade-up group`}>
+    <div
+      className={`relative rounded-2xl overflow-hidden ${isSpotlight ? "border-gold-strong h-full" : "border-gold"} bg-[oklch(0.10_0.05_270)] animate-fade-up group`}
+    >
       {video.persistentTrack ? (
-        <video ref={ref} autoPlay playsInline muted={isLocal} className="w-full h-full object-cover" />
+        <video
+          ref={ref}
+          autoPlay
+          playsInline
+          muted={isLocal}
+          className="w-full h-full object-cover"
+        />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,oklch(0.22_0.10_290/0.7),oklch(0.10_0.05_270/0.95))]">
-          <div className={`${isSpotlight ? "size-32 text-5xl" : "size-20 text-3xl"} rounded-full bg-[image:var(--gradient-gold)] flex items-center justify-center font-display font-bold text-[#0a0a2e] glow-gold-sm`}>
+          <div
+            className={`${isSpotlight ? "size-32 text-5xl" : "size-20 text-3xl"} rounded-full bg-[image:var(--gradient-gold)] flex items-center justify-center font-display font-bold text-[#0a0a2e] glow-gold-sm`}
+          >
             {initials}
           </div>
         </div>
@@ -971,7 +1321,9 @@ function ParticipantTile({
           </span>
         )}
         {tRemaining !== null && (
-          <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${tRemaining > 5 ? "bg-[oklch(0.82_0.16_88/0.85)] text-[#0a0a2e]" : "bg-rose-500 text-white animate-pulse"} font-bold inline-flex items-center gap-1`}>
+          <span
+            className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full ${tRemaining > 5 ? "bg-[oklch(0.82_0.16_88/0.85)] text-[#0a0a2e]" : "bg-rose-500 text-white animate-pulse"} font-bold inline-flex items-center gap-1`}
+          >
             <Timer className="size-3" /> {tRemaining}s
           </span>
         )}
@@ -1045,24 +1397,64 @@ function AdminMenu({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2 bg-card-velvet border-gold space-y-1">
-        <p className="text-xs uppercase tracking-wider text-rainbow font-semibold px-2 py-1">Admin actions</p>
-        <button onClick={() => onMute(sessionId)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2"><MicOff className="size-4" /> Mute participant</button>
-        <button onClick={() => onSpotlight(isSpotlight ? null : sessionId)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2">
-          {isSpotlight ? <><PinOff className="size-4" /> Remove spotlight</> : <><Pin className="size-4" /> Spotlight</>}
+        <p className="text-xs uppercase tracking-wider text-rainbow font-semibold px-2 py-1">
+          Admin actions
+        </p>
+        <button
+          onClick={() => onMute(sessionId)}
+          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2"
+        >
+          <MicOff className="size-4" /> Mute participant
         </button>
-        <button onClick={() => onRequestShare(sessionId)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2"><Monitor className="size-4" /> Request screen share</button>
+        <button
+          onClick={() => onSpotlight(isSpotlight ? null : sessionId)}
+          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2"
+        >
+          {isSpotlight ? (
+            <>
+              <PinOff className="size-4" /> Remove spotlight
+            </>
+          ) : (
+            <>
+              <Pin className="size-4" /> Spotlight
+            </>
+          )}
+        </button>
+        <button
+          onClick={() => onRequestShare(sessionId)}
+          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-white/5 flex items-center gap-2"
+        >
+          <Monitor className="size-4" /> Request screen share
+        </button>
         {attendeeId && (
           <div className="px-2 py-2 border-t border-border mt-1">
             <Label className="text-[10px] uppercase tracking-wider">Speaker timer (sec)</Label>
             <div className="flex gap-1 mt-1">
-              <Input value={timerInput} onChange={(e) => setTimerInput(e.target.value)} type="number" min={5} max={3600} className="h-8" />
-              <GoldButton size="sm" onClick={() => onTimer(attendeeId, Math.max(5, Math.min(3600, parseInt(timerInput, 10) || 60)))}>
+              <Input
+                value={timerInput}
+                onChange={(e) => setTimerInput(e.target.value)}
+                type="number"
+                min={5}
+                max={3600}
+                className="h-8"
+              />
+              <GoldButton
+                size="sm"
+                onClick={() =>
+                  onTimer(attendeeId, Math.max(5, Math.min(3600, parseInt(timerInput, 10) || 60)))
+                }
+              >
                 <Timer className="size-3.5" />
               </GoldButton>
             </div>
           </div>
         )}
-        <button onClick={() => onEject(sessionId, attendeeId)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-rose-500/20 text-rose-300 flex items-center gap-2"><Trash2 className="size-4" /> Remove from meeting</button>
+        <button
+          onClick={() => onEject(sessionId, attendeeId)}
+          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-rose-500/20 text-rose-300 flex items-center gap-2"
+        >
+          <Trash2 className="size-4" /> Remove from meeting
+        </button>
       </PopoverContent>
     </Popover>
   );
@@ -1107,8 +1499,13 @@ function AnnotationOverlay() {
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
   };
-  const up = () => { drawingRef.current = false; };
-  const clear = () => { const c = canvasRef.current!; c.getContext("2d")!.clearRect(0, 0, c.width, c.height); };
+  const up = () => {
+    drawingRef.current = false;
+  };
+  const clear = () => {
+    const c = canvasRef.current!;
+    c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
+  };
 
   return (
     <>
@@ -1122,20 +1519,45 @@ function AnnotationOverlay() {
       />
       <div className="absolute top-2 right-2 flex items-center gap-1 bg-[oklch(0.10_0.05_270/0.9)] border border-[oklch(0.82_0.16_88/0.5)] rounded-full px-2 py-1.5 backdrop-blur-sm">
         {["#ffd93d", "#ff6b9d", "#4d96ff", "#6bcb77"].map((c) => (
-          <button key={c} onClick={() => setColor(c)} className={`size-5 rounded-full border-2 ${color === c ? "border-white" : "border-transparent"}`} style={{ background: c }} />
+          <button
+            key={c}
+            onClick={() => setColor(c)}
+            className={`size-5 rounded-full border-2 ${color === c ? "border-white" : "border-transparent"}`}
+            style={{ background: c }}
+          />
         ))}
-        <button onClick={clear} className="text-xs px-2 py-0.5 text-foreground/80 hover:text-foreground">Clear</button>
+        <button
+          onClick={clear}
+          className="text-xs px-2 py-0.5 text-foreground/80 hover:text-foreground"
+        >
+          Clear
+        </button>
       </div>
     </>
   );
 }
 
-function Sidebar({ title, icon, onClose, children }: { title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
+function Sidebar({
+  title,
+  icon,
+  onClose,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <aside className="w-full md:w-96 border-l border-[oklch(0.82_0.16_88/0.2)] bg-[oklch(0.12_0.06_275/0.85)] backdrop-blur-md flex flex-col animate-fade-up">
       <div className="px-4 py-3 flex items-center justify-between border-b border-[oklch(0.82_0.16_88/0.2)]">
-        <div className="flex items-center gap-2 text-gold font-display text-lg">{icon}{title}</div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+        <div className="flex items-center gap-2 text-gold font-display text-lg">
+          {icon}
+          {title}
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <X className="size-4" />
+        </button>
       </div>
       <div className="flex-1 overflow-hidden flex flex-col">{children}</div>
     </aside>
@@ -1162,17 +1584,26 @@ function PeoplePanel({
     <div className="overflow-auto p-3 space-y-4">
       {isOwner && waitingList.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-rainbow font-semibold mb-1.5">Waiting room ({waitingList.length})</p>
+          <p className="text-[10px] uppercase tracking-wider text-rainbow font-semibold mb-1.5">
+            Waiting room ({waitingList.length})
+          </p>
           <ul className="space-y-1">
             {waitingList.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-[oklch(0.82_0.16_88/0.3)] bg-[oklch(0.82_0.16_88/0.05)]">
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-[oklch(0.82_0.16_88/0.3)] bg-[oklch(0.82_0.16_88/0.05)]"
+              >
                 <div className="min-w-0">
                   <p className="text-sm text-foreground truncate">{a.full_name}</p>
                   <p className="text-xs text-muted-foreground truncate">{a.email}</p>
                 </div>
                 <div className="flex gap-1.5">
-                  <GoldButton size="sm" onClick={() => onAdmit(a.id)}>Admit</GoldButton>
-                  <GoldButton size="sm" variant="ghost" onClick={() => onDeny(a.id)}>Deny</GoldButton>
+                  <GoldButton size="sm" onClick={() => onAdmit(a.id)}>
+                    Admit
+                  </GoldButton>
+                  <GoldButton size="sm" variant="ghost" onClick={() => onDeny(a.id)}>
+                    Deny
+                  </GoldButton>
                 </div>
               </li>
             ))}
@@ -1182,10 +1613,15 @@ function PeoplePanel({
 
       {handsUp.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-gold font-semibold mb-1.5">Raised hands ({handsUp.length})</p>
+          <p className="text-[10px] uppercase tracking-wider text-gold font-semibold mb-1.5">
+            Raised hands ({handsUp.length})
+          </p>
           <ol className="space-y-1 text-sm">
             {handsUp.map((a, i) => (
-              <li key={a.id} className="px-3 py-1.5 rounded-lg bg-[oklch(0.82_0.16_88/0.1)] flex items-center gap-2">
+              <li
+                key={a.id}
+                className="px-3 py-1.5 rounded-lg bg-[oklch(0.82_0.16_88/0.1)] flex items-center gap-2"
+              >
                 <span className="text-xs font-bold text-gold">{i + 1}.</span>
                 <Hand className="size-3.5 text-[oklch(0.82_0.16_88)]" /> {a.full_name}
               </li>
@@ -1195,17 +1631,25 @@ function PeoplePanel({
       )}
 
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">In meeting ({admitted.length})</p>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+          In meeting ({admitted.length})
+        </p>
         <ul className="space-y-1">
           {admitted.map((a) => (
-            <li key={a.id} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5">
+            <li
+              key={a.id}
+              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5"
+            >
               <div className="min-w-0">
                 <p className="text-sm text-foreground truncate flex items-center gap-1.5">
-                  {a.is_admin && <Crown className="size-3 text-[oklch(0.82_0.16_88)]" />} {a.full_name}
+                  {a.is_admin && <Crown className="size-3 text-[oklch(0.82_0.16_88)]" />}{" "}
+                  {a.full_name}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">{a.email}</p>
               </div>
-              <span className="text-xs text-muted-foreground tabular-nums">{durationLabel(a.joined_at, a.left_at)}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {durationLabel(a.joined_at, a.left_at)}
+              </span>
             </li>
           ))}
         </ul>
@@ -1214,19 +1658,41 @@ function PeoplePanel({
   );
 }
 
-function ChatPanel({ messages, draft, setDraft, onSend, me }: { messages: ChatMessage[]; draft: string; setDraft: (v: string) => void; onSend: () => void; me: string }) {
+function ChatPanel({
+  messages,
+  draft,
+  setDraft,
+  onSend,
+  me,
+}: {
+  messages: ChatMessage[];
+  draft: string;
+  setDraft: (v: string) => void;
+  onSend: () => void;
+  me: string;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
   return (
     <>
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {messages.length === 0 && <p className="text-sm text-muted-foreground text-center mt-6">No messages yet. Be the first to speak.</p>}
+        {messages.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center mt-6">
+            No messages yet. Be the first to speak.
+          </p>
+        )}
         {messages.map((m) => {
           const mine = m.sender_name === me;
           return (
             <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{m.sender_name}</span>
-              <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${mine ? "bg-[image:var(--gradient-gold)] text-[#0a0a2e] rounded-br-sm" : "bg-white/5 border border-border text-foreground rounded-bl-sm"}`}>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
+                {m.sender_name}
+              </span>
+              <div
+                className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${mine ? "bg-[image:var(--gradient-gold)] text-[#0a0a2e] rounded-br-sm" : "bg-white/5 border border-border text-foreground rounded-bl-sm"}`}
+              >
                 {m.body}
               </div>
             </div>
@@ -1235,11 +1701,21 @@ function ChatPanel({ messages, draft, setDraft, onSend, me }: { messages: ChatMe
         <div ref={endRef} />
       </div>
       <form
-        onSubmit={(e) => { e.preventDefault(); onSend(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSend();
+        }}
         className="p-3 border-t border-[oklch(0.82_0.16_88/0.2)] flex items-center gap-2"
       >
-        <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Say something elegant…" maxLength={1000} />
-        <GoldButton type="submit" size="sm" disabled={!draft.trim()}><Send className="size-4" /></GoldButton>
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Say something elegant…"
+          maxLength={1000}
+        />
+        <GoldButton type="submit" size="sm" disabled={!draft.trim()}>
+          <Send className="size-4" />
+        </GoldButton>
       </form>
     </>
   );
@@ -1247,7 +1723,15 @@ function ChatPanel({ messages, draft, setDraft, onSend, me }: { messages: ChatMe
 
 /* ───────────────── Summary Card ───────────────── */
 
-function SummaryCard({ meeting, rows, onClose }: { meeting: MeetingMeta; rows: AttendeeRow[]; onClose: () => void }) {
+function SummaryCard({
+  meeting,
+  rows,
+  onClose,
+}: {
+  meeting: MeetingMeta;
+  rows: AttendeeRow[];
+  onClose: () => void;
+}) {
   const { unique, peak, totalDurationSec } = useMemo(() => computeSummary(rows), [rows]);
   const totalH = Math.floor(totalDurationSec / 3600);
   const totalM = Math.floor((totalDurationSec % 3600) / 60);
@@ -1257,7 +1741,9 @@ function SummaryCard({ meeting, rows, onClose }: { meeting: MeetingMeta; rows: A
       <VelvetCard className="max-w-2xl w-full" glow="holo">
         <div className="text-center">
           <Logo size="md" />
-          <p className="text-xs uppercase tracking-[0.3em] text-rainbow font-semibold mt-4">Curtain call</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-rainbow font-semibold mt-4">
+            Curtain call
+          </p>
           <h1 className="font-display text-3xl text-gold mt-1">{meeting.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">Here's how the session played out.</p>
         </div>
@@ -1281,10 +1767,17 @@ function SummaryCard({ meeting, rows, onClose }: { meeting: MeetingMeta; rows: A
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
-                  <td className="px-3 py-2 flex items-center gap-1.5">{r.is_admin && <Crown className="size-3 text-[oklch(0.82_0.16_88)]" />} {r.full_name}</td>
+                  <td className="px-3 py-2 flex items-center gap-1.5">
+                    {r.is_admin && <Crown className="size-3 text-[oklch(0.82_0.16_88)]" />}{" "}
+                    {r.full_name}
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground">{r.email}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{new Date(r.joined_at).toLocaleTimeString()}</td>
-                  <td className="px-3 py-2 tabular-nums">{durationLabel(r.joined_at, r.left_at)}</td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {new Date(r.joined_at).toLocaleTimeString()}
+                  </td>
+                  <td className="px-3 py-2 tabular-nums">
+                    {durationLabel(r.joined_at, r.left_at)}
+                  </td>
                 </tr>
               ))}
             </tbody>

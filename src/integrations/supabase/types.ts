@@ -265,6 +265,41 @@ export type Database = {
           },
         ]
       }
+      meeting_links: {
+        Row: {
+          added_by_name: string
+          created_at: string
+          id: string
+          meeting_id: string
+          title: string
+          url: string
+        }
+        Insert: {
+          added_by_name?: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          title: string
+          url: string
+        }
+        Update: {
+          added_by_name?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_links_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_messages: {
         Row: {
           body: string
@@ -292,6 +327,95 @@ export type Database = {
             foreignKeyName: "meeting_messages_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_note_versions: {
+        Row: {
+          author_name: string | null
+          content_html: string
+          created_at: string
+          id: string
+          label: string | null
+          meeting_id: string
+          note_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          content_html?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          meeting_id: string
+          note_id: string
+        }
+        Update: {
+          author_name?: string | null
+          content_html?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          meeting_id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_note_versions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_note_versions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_notes: {
+        Row: {
+          allowed_editors: Json
+          content_html: string
+          content_text: string
+          created_at: string
+          edit_mode: string
+          id: string
+          meeting_id: string
+          updated_at: string
+          updated_by_name: string | null
+        }
+        Insert: {
+          allowed_editors?: Json
+          content_html?: string
+          content_text?: string
+          created_at?: string
+          edit_mode?: string
+          id?: string
+          meeting_id: string
+          updated_at?: string
+          updated_by_name?: string | null
+        }
+        Update: {
+          allowed_editors?: Json
+          content_html?: string
+          content_text?: string
+          created_at?: string
+          edit_mode?: string
+          id?: string
+          meeting_id?: string
+          updated_at?: string
+          updated_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
             referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
