@@ -33,9 +33,7 @@ export type GeneratedSummary = z.infer<typeof SummarySchema>;
  */
 export const generateMeetingSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ meetingId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ meetingId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -103,8 +101,7 @@ export const generateMeetingSummary = createServerFn({ method: "POST" })
           output: Output.object({ schema: SummarySchema }),
           system:
             "You are an executive meeting assistant. Produce a concise, structured summary of the meeting. Identify clear action items with owners, key discussion points, decisions, and flag obvious transcription typos with suggested corrections. Be specific, never invent attendees, and respect the speakers as listed.",
-          prompt:
-            `Meeting title: ${meeting.title}\n\nAttendees:\n${attendeeList || "(unknown)"}\n\nTranscript:\n${transcriptText.slice(0, 60000)}`,
+          prompt: `Meeting title: ${meeting.title}\n\nAttendees:\n${attendeeList || "(unknown)"}\n\nTranscript:\n${transcriptText.slice(0, 60000)}`,
         });
         summary = output;
       } catch (e) {
@@ -121,17 +118,15 @@ export const generateMeetingSummary = createServerFn({ method: "POST" })
     }
 
     // Upsert
-    const { error: uErr } = await supabase
-      .from("meeting_summaries")
-      .upsert(
-        {
-          meeting_id: data.meetingId,
-          status: "pending_review",
-          // jsonb column; the DB accepts any JSON-serializable value
-          content: summary as never,
-        },
-        { onConflict: "meeting_id" },
-      );
+    const { error: uErr } = await supabase.from("meeting_summaries").upsert(
+      {
+        meeting_id: data.meetingId,
+        status: "pending_review",
+        // jsonb column; the DB accepts any JSON-serializable value
+        content: summary as never,
+      },
+      { onConflict: "meeting_id" },
+    );
     if (uErr) throw new Error(uErr.message);
 
     return { ok: true, summary };
@@ -194,7 +189,7 @@ export const approveMeetingSummary = createServerFn({ method: "POST" })
       const content = (row?.content ?? {}) as Partial<GeneratedSummary>;
       const esc = (s: string) =>
         s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const parts: string[] = ['<h2>AI Summary</h2>'];
+      const parts: string[] = ["<h2>AI Summary</h2>"];
       if (content.overview) parts.push(`<p>${esc(content.overview)}</p>`);
       if (content.key_points?.length)
         parts.push(
@@ -207,7 +202,10 @@ export const approveMeetingSummary = createServerFn({ method: "POST" })
       if (content.action_items?.length)
         parts.push(
           `<h2>Action items</h2><ul>${content.action_items
-            .map((a) => `<li><strong>${esc(a.owner)}</strong>: ${esc(a.text)}${a.due ? ` (${esc(a.due)})` : ""}</li>`)
+            .map(
+              (a) =>
+                `<li><strong>${esc(a.owner)}</strong>: ${esc(a.text)}${a.due ? ` (${esc(a.due)})` : ""}</li>`,
+            )
             .join("")}</ul>`,
         );
       const html = parts.join("");
@@ -221,13 +219,18 @@ export const approveMeetingSummary = createServerFn({ method: "POST" })
         if (!(note.content_html ?? "").includes("<h2>AI Summary</h2>")) {
           await supabase
             .from("meeting_notes")
-            .update({ content_html: `${note.content_html ?? ""}${html}`, updated_by_name: "AI Summary" })
+            .update({
+              content_html: `${note.content_html ?? ""}${html}`,
+              updated_by_name: "AI Summary",
+            })
             .eq("id", note.id);
         }
       } else {
-        await supabase
-          .from("meeting_notes")
-          .insert({ meeting_id: data.meetingId, content_html: html, updated_by_name: "AI Summary" });
+        await supabase.from("meeting_notes").insert({
+          meeting_id: data.meetingId,
+          content_html: html,
+          updated_by_name: "AI Summary",
+        });
       }
     } catch (e) {
       console.error("Appending summary to notes failed:", e);

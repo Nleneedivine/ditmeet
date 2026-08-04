@@ -95,7 +95,9 @@ export function ResourcesPanel({
         />
       )}
 
-      {tab === "links" && <LinksTab meetingId={meetingId} guestName={guestName} isOwner={isOwner} />}
+      {tab === "links" && (
+        <LinksTab meetingId={meetingId} guestName={guestName} isOwner={isOwner} />
+      )}
 
       {tab === "files" && (
         <Placeholder
@@ -123,7 +125,9 @@ export function ResourcesPanel({
           icon={<BarChart3 className="size-6" />}
           title="Live polls"
           body="Polls currently run from the Agenda & AI panel."
-          action={onOpenAgendaPanel ? { label: "Open polls", onClick: onOpenAgendaPanel } : undefined}
+          action={
+            onOpenAgendaPanel ? { label: "Open polls", onClick: onOpenAgendaPanel } : undefined
+          }
         />
       )}
       {tab === "commitments" && (
@@ -131,7 +135,11 @@ export function ResourcesPanel({
           icon={<Handshake className="size-6" />}
           title="Commitments"
           body="AI-detected promises live in the Agenda & AI panel today, and will be mirrored here."
-          action={onOpenAgendaPanel ? { label: "Open commitments", onClick: onOpenAgendaPanel } : undefined}
+          action={
+            onOpenAgendaPanel
+              ? { label: "Open commitments", onClick: onOpenAgendaPanel }
+              : undefined
+          }
         />
       )}
       {tab === "summary" && (
@@ -188,7 +196,12 @@ function LinksTab({
       .channel(`links:${meetingId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "meeting_links", filter: `meeting_id=eq.${meetingId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "meeting_links",
+          filter: `meeting_id=eq.${meetingId}`,
+        },
         () => void load(),
       )
       .subscribe();

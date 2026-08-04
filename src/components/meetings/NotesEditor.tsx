@@ -174,7 +174,12 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
       .channel(`notes:${meetingId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "meeting_notes", filter: `meeting_id=eq.${meetingId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "meeting_notes",
+          filter: `meeting_id=eq.${meetingId}`,
+        },
         (payload) => {
           const row = payload.new as NoteRow;
           if (!row) return;
@@ -331,14 +336,23 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
     (e: React.KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
-      if (k === "b") { e.preventDefault(); exec("bold"); }
-      else if (k === "i") { e.preventDefault(); exec("italic"); }
-      else if (k === "u") { e.preventDefault(); exec("underline"); }
-      else if (k === "k") {
+      if (k === "b") {
+        e.preventDefault();
+        exec("bold");
+      } else if (k === "i") {
+        e.preventDefault();
+        exec("italic");
+      } else if (k === "u") {
+        e.preventDefault();
+        exec("underline");
+      } else if (k === "k") {
         e.preventDefault();
         const url = window.prompt("Link URL");
         if (url) exec("createLink", url);
-      } else if (k === "s") { e.preventDefault(); void flush(); }
+      } else if (k === "s") {
+        e.preventDefault();
+        void flush();
+      }
     },
     [exec, flush],
   );
@@ -488,21 +502,41 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
     <div className="flex-1 flex flex-col min-h-0">
       {/* Toolbar */}
       <div className="shrink-0 px-2 py-2 border-b border-[var(--border-soft)] flex flex-wrap items-center gap-1">
-        <TB onClick={() => exec("formatBlock", "<h1>")} label="Heading 1" disabled={!canEdit}><Heading1 className="size-4" /></TB>
-        <TB onClick={() => exec("formatBlock", "<h2>")} label="Heading 2" disabled={!canEdit}><Heading2 className="size-4" /></TB>
-        <TB onClick={() => exec("bold")} label="Bold (Ctrl+B)" disabled={!canEdit}><Bold className="size-4" /></TB>
-        <TB onClick={() => exec("italic")} label="Italic (Ctrl+I)" disabled={!canEdit}><Italic className="size-4" /></TB>
-        <TB onClick={() => exec("underline")} label="Underline (Ctrl+U)" disabled={!canEdit}><Underline className="size-4" /></TB>
-        <TB onClick={() => exec("insertUnorderedList")} label="Bullet list" disabled={!canEdit}><List className="size-4" /></TB>
-        <TB onClick={() => exec("insertOrderedList")} label="Numbered list" disabled={!canEdit}><ListOrdered className="size-4" /></TB>
+        <TB onClick={() => exec("formatBlock", "<h1>")} label="Heading 1" disabled={!canEdit}>
+          <Heading1 className="size-4" />
+        </TB>
+        <TB onClick={() => exec("formatBlock", "<h2>")} label="Heading 2" disabled={!canEdit}>
+          <Heading2 className="size-4" />
+        </TB>
+        <TB onClick={() => exec("bold")} label="Bold (Ctrl+B)" disabled={!canEdit}>
+          <Bold className="size-4" />
+        </TB>
+        <TB onClick={() => exec("italic")} label="Italic (Ctrl+I)" disabled={!canEdit}>
+          <Italic className="size-4" />
+        </TB>
+        <TB onClick={() => exec("underline")} label="Underline (Ctrl+U)" disabled={!canEdit}>
+          <Underline className="size-4" />
+        </TB>
+        <TB onClick={() => exec("insertUnorderedList")} label="Bullet list" disabled={!canEdit}>
+          <List className="size-4" />
+        </TB>
+        <TB onClick={() => exec("insertOrderedList")} label="Numbered list" disabled={!canEdit}>
+          <ListOrdered className="size-4" />
+        </TB>
         <TB
-          onClick={() => insertHtml('<div class="ditm-check"><input type="checkbox" /> <span>To do</span></div>')}
+          onClick={() =>
+            insertHtml('<div class="ditm-check"><input type="checkbox" /> <span>To do</span></div>')
+          }
           label="Checklist"
           disabled={!canEdit}
         >
           <ListChecks className="size-4" />
         </TB>
-        <TB onClick={() => insertHtml("<pre class=\"ditm-code\"><code>code</code></pre><p><br/></p>")} label="Code block" disabled={!canEdit}>
+        <TB
+          onClick={() => insertHtml('<pre class="ditm-code"><code>code</code></pre><p><br/></p>')}
+          label="Code block"
+          disabled={!canEdit}
+        >
           <Code2 className="size-4" />
         </TB>
         <TB
@@ -526,12 +560,23 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
         >
           <Link2 className="size-4" />
         </TB>
-        <TB onClick={() => { setMentionQuery(""); setMentionOpen(true); }} label="Mention someone" disabled={!canEdit}>
+        <TB
+          onClick={() => {
+            setMentionQuery("");
+            setMentionOpen(true);
+          }}
+          label="Mention someone"
+          disabled={!canEdit}
+        >
           <AtSign className="size-4" />
         </TB>
         <div className="ml-auto flex items-center gap-1">
-          <TB onClick={() => void saveVersion()} label="Save version" disabled={!canEdit}><Save className="size-4" /></TB>
-          <TB onClick={() => setShowHistory((v) => !v)} label="Version history"><History className="size-4" /></TB>
+          <TB onClick={() => void saveVersion()} label="Save version" disabled={!canEdit}>
+            <Save className="size-4" />
+          </TB>
+          <TB onClick={() => setShowHistory((v) => !v)} label="Version history">
+            <History className="size-4" />
+          </TB>
         </div>
       </div>
 
@@ -541,7 +586,9 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
           {savingState === "offline" ? (
             <CloudOff className="size-3 text-amber-400" />
           ) : (
-            <Cloud className={`size-3 ${savingState === "saving" ? "text-sky-300 animate-pulse" : "text-emerald-400"}`} />
+            <Cloud
+              className={`size-3 ${savingState === "saving" ? "text-sky-300 animate-pulse" : "text-emerald-400"}`}
+            />
           )}
           {savingState === "offline"
             ? "Offline — will sync"
@@ -553,19 +600,31 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
         </span>
         {note && (
           <Badge variant="outline" className="gap-1 text-[10px] border-[var(--border-soft)]">
-            {note.edit_mode === "everyone" ? <Users className="size-3" /> : <Lock className="size-3" />}
+            {note.edit_mode === "everyone" ? (
+              <Users className="size-3" />
+            ) : (
+              <Lock className="size-3" />
+            )}
             {note.edit_mode === "everyone" ? "Everyone edits" : "Host only"}
           </Badge>
         )}
         {isOwner && (
-          <button onClick={() => void toggleEditMode()} className="text-gold hover:underline text-[11px]">
+          <button
+            onClick={() => void toggleEditMode()}
+            className="text-gold hover:underline text-[11px]"
+          >
             change
           </button>
         )}
         {cursors.length > 0 && (
           <span className="ml-auto inline-flex items-center gap-1">
             {cursors.map((c) => (
-              <span key={c.id} className="size-2 rounded-full" style={{ background: c.color }} title={c.name} />
+              <span
+                key={c.id}
+                className="size-2 rounded-full"
+                style={{ background: c.color }}
+                title={c.name}
+              />
             ))}
             editing now
           </span>
@@ -583,7 +642,9 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
           onKeyDown={onKeyDown}
           onKeyUp={broadcastCursor}
           onClick={onEditorClick}
-          onBlur={() => { if (dirtyRef.current) void flush(); }}
+          onBlur={() => {
+            if (dirtyRef.current) void flush();
+          }}
           data-placeholder="Start typing meeting notes…"
         />
 
@@ -608,7 +669,9 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
         {mentionOpen && canEdit && (
           <div className="absolute bottom-3 left-3 right-3 z-20 rounded-xl border border-[var(--border-soft)] bg-[oklch(0.12_0.06_275/0.96)] backdrop-blur-md p-1 shadow-lg">
             {mentionMatches.length === 0 && (
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">No matching participant</div>
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                No matching participant
+              </div>
             )}
             {mentionMatches.map((a) => (
               <button
@@ -626,7 +689,9 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
       {/* Version history drawer */}
       {showHistory && (
         <div className="shrink-0 max-h-56 overflow-y-auto border-t border-[var(--border-soft)] bg-black/20">
-          <div className="px-3 py-2 text-xs uppercase tracking-widest text-gold">Version history</div>
+          <div className="px-3 py-2 text-xs uppercase tracking-widest text-gold">
+            Version history
+          </div>
           {versions.length === 0 && (
             <div className="px-3 pb-3 text-xs text-muted-foreground">No versions saved yet.</div>
           )}
