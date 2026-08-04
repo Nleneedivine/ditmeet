@@ -27,6 +27,7 @@ import {
   Monitor,
   MonitorOff,
   MoreVertical,
+  NotebookPen,
   PartyPopper,
   Pencil,
   Pin,
@@ -49,6 +50,7 @@ import { createDailyMeetingToken } from "@/lib/daily.functions";
 import { useLiveTranscription } from "@/hooks/use-live-transcription";
 import { CaptionStrip } from "@/components/meetings/CaptionStrip";
 import { StageBPanel } from "@/components/meetings/StageBPanel";
+import { ResourcesPanel } from "@/components/meetings/ResourcesPanel";
 import { generateMeetingSummary } from "@/lib/summary.functions";
 import { computeSummary, downloadAttendanceCSV, durationLabel, type AttendanceRow } from "@/lib/attendance";
 import { Logo } from "@/components/brand/Logo";
@@ -363,6 +365,7 @@ function Room({
   const [showChat, setShowChat] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [showStageB, setShowStageB] = useState(false);
+  const [showResources, setShowResources] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [attendees, setAttendees] = useState<AttendeeRow[]>([]);
@@ -731,6 +734,19 @@ function Room({
             <StageBPanel meetingId={meeting.id} attendeeId={attendeeId} guestName={guestName} isOwner={isOwner} />
           </Sidebar>
         )}
+
+        {showResources && (
+          <Sidebar title="Resources" icon={<NotebookPen className="size-4" />} onClose={() => setShowResources(false)}>
+            <ResourcesPanel
+              meetingId={meeting.id}
+              guestName={guestName}
+              isOwner={isOwner}
+              attendees={attendees.filter((a) => a.status === "admitted").map((a) => ({ id: a.id, full_name: a.full_name }))}
+              onOpenAgendaPanel={() => { setShowResources(false); setShowStageB(true); }}
+              onMention={(_id, name) => toast.message(`Mentioned ${name}`)}
+            />
+          </Sidebar>
+        )}
       </div>
 
       {/* Controls — pinned bottom, scrollable horizontally on tiny screens */}
@@ -765,9 +781,10 @@ function Room({
         </Popover>
 
         <div className="w-px h-7 bg-border mx-1 hidden md:block" />
-        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) { setShowChat(false); setShowStageB(false); } }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
-        <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) { setShowPeople(false); setShowStageB(false); } }} label="Chat" icon={<MessageSquare className="size-5" />} />
-        <ControlButton active={showStageB} onClick={() => { setShowStageB((v) => !v); if (!showStageB) { setShowPeople(false); setShowChat(false); } }} label="Agenda & AI" icon={<Sparkles className="size-5" />} />
+        <ControlButton active={showPeople} onClick={() => { setShowPeople((v) => !v); if (!showPeople) { setShowChat(false); setShowStageB(false); setShowResources(false); } }} label="People" icon={<Users className="size-5" />} badge={waitingList.length || handsUp.length} />
+        <ControlButton active={showChat} onClick={() => { setShowChat((v) => !v); if (!showChat) { setShowPeople(false); setShowStageB(false); setShowResources(false); } }} label="Chat" icon={<MessageSquare className="size-5" />} />
+        <ControlButton active={showStageB} onClick={() => { setShowStageB((v) => !v); if (!showStageB) { setShowPeople(false); setShowChat(false); setShowResources(false); } }} label="Agenda & AI" icon={<Sparkles className="size-5" />} />
+        <ControlButton active={showResources} onClick={() => { setShowResources((v) => !v); if (!showResources) { setShowPeople(false); setShowChat(false); setShowStageB(false); } }} label="Resources" icon={<NotebookPen className="size-5" />} />
 
         {isOwner && (
           <>
