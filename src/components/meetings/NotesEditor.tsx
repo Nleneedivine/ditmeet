@@ -125,8 +125,7 @@ export function NotesEditor({ meetingId, guestName, isOwner, attendees, onMentio
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const noteIdRef = useRef<string | null>(null);
 
-  const canEdit =
-    !!note && (isOwner || note.edit_mode === "everyone" || (Array.isArray(note.allowed_editors) && false));
+  const canEdit = !!note && (isOwner || note.edit_mode === "everyone");
 
   /* ---------------- load / create the note document ---------------- */
   useEffect(() => {
