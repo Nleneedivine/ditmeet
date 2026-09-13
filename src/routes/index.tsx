@@ -103,6 +103,17 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
   const [loading, setLoading] = useState(true);
   const [startingInstant, setStartingInstant] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) return;
+    supabase
+      .rpc("has_role", { _user_id: user.id, _role: "super_admin" })
+      .then(({ data }) => { if (!cancelled) setIsSuperAdmin(Boolean(data)); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
 
   const load = async () => {
     setLoading(true);
