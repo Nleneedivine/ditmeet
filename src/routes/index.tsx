@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Calendar, Copy, LogOut, Plus, Sparkles, Video } from "lucide-react";
+import { Calendar, Copy, LogOut, Plus, ShieldCheck, Sparkles, Video } from "lucide-react";
 
 import { useAuth, signOut } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +103,17 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
   const [loading, setLoading] = useState(true);
   const [startingInstant, setStartingInstant] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) return;
+    supabase
+      .rpc("has_role", { _user_id: user.id, _role: "super_admin" })
+      .then(({ data }) => { if (!cancelled) setIsSuperAdmin(Boolean(data)); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
 
   const load = async () => {
     setLoading(true);
@@ -161,9 +172,20 @@ function Dashboard({ user }: { user: import("@supabase/supabase-js").User }) {
             <p className="text-sm uppercase tracking-[0.3em] text-rainbow font-semibold">Backstage</p>
             <h1 className="font-display text-4xl text-gold mt-1">Welcome, {user?.user_metadata?.full_name?.split(" ")[0] ?? "Host"}</h1>
           </div>
-          <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
-            <LogOut className="size-4" /> Sign out
-          </button>
+          <div className="flex items-center gap-4">
+            {isSuperAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-[#0a1a3a] bg-[image:var(--gradient-gold)] glow-gold-sm hover:opacity-90 transition"
+              >
+                <ShieldCheck className="size-4" /> Control Room
+              </Link>
+            )}
+            <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+              <LogOut className="size-4" /> Sign out
+            </button>
+          </div>
+
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 mb-12">
