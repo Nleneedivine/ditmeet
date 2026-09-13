@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Calendar, Copy, LogOut, Plus, Sparkles, Video } from "lucide-react";
+import { Calendar, Copy, LogOut, Plus, ShieldCheck, Sparkles, Video } from "lucide-react";
 
 import { useAuth, signOut } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
