@@ -238,6 +238,14 @@ function MeetingPage() {
           .update({ left_at: new Date().toISOString() })
           .eq("id", attendeeId);
       }
+      // Close the session automatically once the room is empty
+      if (meeting) {
+        const { error: endErr } = await supabase.rpc("end_meeting_if_empty", {
+          _meeting_id: meeting.id,
+        });
+        if (endErr) console.warn("auto-end failed:", endErr);
+      }
+
       // Fetch final attendance for summary card
       if (meeting) {
         const { data } = await supabase
