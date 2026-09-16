@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
   Clock,
+  PhoneOff,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
