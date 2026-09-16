@@ -252,6 +252,16 @@ function AdminConsole() {
                         >
                           <Download className="size-3.5" /> Attendance CSV
                         </button>
+                        {m.status !== "ended" && (
+                          <button
+                            type="button"
+                            onClick={() => endSession(m)}
+                            className="inline-flex items-center gap-1.5 text-xs text-red-300 hover:text-red-200 hover:underline"
+                          >
+                            <PhoneOff className="size-3.5" /> End session
+                          </button>
+                        )}
+
                       </div>
 
                       {rows.length === 0 ? (
