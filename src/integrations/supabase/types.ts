@@ -748,6 +748,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      end_meeting_if_empty: { Args: { _meeting_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
