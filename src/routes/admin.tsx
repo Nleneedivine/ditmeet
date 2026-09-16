@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
   Clock,
+  PhoneOff,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -135,6 +136,29 @@ function AdminConsole() {
     })();
   }, []);
 
+  const endSession = async (m: MeetingRow) => {
+    if (!confirm(`End "${m.title}" for everyone?`)) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("meetings")
+      .update({ status: "ended", ended_at: now })
+      .eq("id", m.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await supabase
+      .from("meeting_attendees")
+      .update({ left_at: now })
+      .eq("meeting_id", m.id)
+      .is("left_at", null);
+    setMeetings((prev) =>
+      prev.map((x) => (x.id === m.id ? { ...x, status: "ended", ended_at: now } : x)),
+    );
+    toast.success("Session ended");
+  };
+
+
   const stats = useMemo(() => {
     const totalAttendees = Object.values(attendees).reduce((n, rows) => n + rows.length, 0);
     return {
@@ -229,6 +253,16 @@ function AdminConsole() {
                         >
                           <Download className="size-3.5" /> Attendance CSV
                         </button>
+                        {m.status !== "ended" && (
+                          <button
+                            type="button"
+                            onClick={() => endSession(m)}
+                            className="inline-flex items-center gap-1.5 text-xs text-red-300 hover:text-red-200 hover:underline"
+                          >
+                            <PhoneOff className="size-3.5" /> End session
+                          </button>
+                        )}
+
                       </div>
 
                       {rows.length === 0 ? (
