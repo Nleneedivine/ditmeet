@@ -183,15 +183,65 @@ function MeetingPage() {
       });
       setIsOwner(owner);
       const co = DailyIframe.createCallObject();
-      await co.join({ url: meeting.room_url, userName: name.trim(), token });
+      await co.join({
+        url: meeting.room_url,
+        userName: name.trim(),
+        token,
+        userData: callProfileData(user?.user_metadata, owner),
+      });
       setCallObject(co);
       setWaiting(false);
       setJoined(true);
+      setJoining(false);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to join");
       setJoining(false);
     }
   }, [meeting, name, user?.id]);
+
+  const reconnectCall = useCallback(async () => {
+    if (!meeting || !attendeeId) return false;
+    setJoining(true);
+    try {
+      if (callObject) {
+        try {
+          await callObject.leave();
+        } catch {
+          // The call may already have dropped.
+        }
+        try {
+          await callObject.destroy();
+        } catch {
+          // Continue with a fresh call object.
+        }
+      }
+      const { token, isOwner: owner } = await createDailyMeetingToken({
+        data: { roomName: meeting.room_name, userName: name.trim(), hostUserId: user?.id },
+      });
+      const co = DailyIframe.createCallObject();
+      await co.join({
+        url: meeting.room_url,
+        userName: name.trim(),
+        token,
+        userData: callProfileData(user?.user_metadata, owner),
+      });
+      const { error } = await supabase
+        .from("meeting_attendees")
+        .update({ left_at: null, status: "admitted" })
+        .eq("id", attendeeId);
+      if (error) throw error;
+      setIsOwner(owner);
+      setCallObject(co);
+      setJoined(true);
+      setJoining(false);
+      toast.success("You’re back in the meeting.");
+      return true;
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not reconnect. Please try again.");
+      setJoining(false);
+      return false;
+    }
+  }, [attendeeId, callObject, meeting, name, user?.id]);
 
   const handleJoin = async () => {
     if (!name.trim() || !email.trim() || !meeting) return;
@@ -357,6 +407,8 @@ function MeetingPage() {
         isOwner={isOwner}
         attendeeId={attendeeId!}
         onLeave={handleLeave}
+        onReconnect={reconnectCall}
+        reconnecting={joining}
       />
       {/* Renders an <audio> sink for every remote participant so audio is actually heard */}
       <DailyAudio />
@@ -374,6 +426,16 @@ function formatDuration(ms: number) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+function callProfileData(metadata: Record<string, unknown> | undefined, isHost: boolean) {
+  const avatarUrl =
+    (typeof metadata?.avatar_url === "string" && metadata.avatar_url) ||
+    (typeof metadata?.picture === "string" && metadata.picture) ||
+    null;
+  const faction = typeof metadata?.faction === "string" ? metadata.faction : null;
+  const profileRole = typeof metadata?.role === "string" ? metadata.role : null;
+  return { avatarUrl, faction, role: isHost ? "Host" : profileRole || "Participant" };
+}
+
 /* ───────────────── Room ───────────────── */
 
 interface FloatingReaction {
@@ -388,12 +450,16 @@ function Room({
   isOwner,
   attendeeId,
   onLeave,
+  onReconnect,
+  reconnecting,
 }: {
   meeting: MeetingMeta;
   guestName: string;
   isOwner: boolean;
   attendeeId: string;
   onLeave: () => void;
+  onReconnect: () => Promise<boolean>;
+  reconnecting: boolean;
 }) {
   const daily = useDaily();
   const participantIds = useParticipantIds();
@@ -414,6 +480,7 @@ function Room({
   const [reactions, setReactions] = useState<FloatingReaction[]>([]);
   const [annotating, setAnnotating] = useState(false);
   const [blurOn, setBlurOn] = useState(false);
+  const [connectionLost, setConnectionLost] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const reactionChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -582,6 +649,7 @@ function Room({
   }, [meeting.id]);
 
   useDailyEvent("error", (e) => toast.error(e?.errorMsg || "Call error"));
+  useDailyEvent("left-meeting", () => setConnectionLost(true));
 
   const sendMessage = async () => {
     const body = draft.trim();
@@ -851,6 +919,24 @@ function Room({
               annotating={annotating}
             />
           </div>
+
+          {connectionLost && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+              <VelvetCard className="w-full max-w-sm text-center" glow="strong">
+                <h2 className="font-display text-xl text-gold">Connection interrupted</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Your details are saved for this visit. Rejoin without clearing your browser data.
+                </p>
+                <GoldButton
+                  className="mt-5 w-full"
+                  onClick={() => void onReconnect().then((success) => success && setConnectionLost(false))}
+                  disabled={reconnecting}
+                >
+                  {reconnecting ? "Rejoining…" : "Rejoin call"}
+                </GoldButton>
+              </VelvetCard>
+            </div>
+          )}
 
           {/* Floating reactions */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1180,41 +1266,25 @@ function ParticipantGrid({
     onTimer,
     onRequestShare,
   };
-  // Spotlight layout: hero + thumbnails strip
-  if (spotlightId && ids.includes(spotlightId)) {
-    const others = ids.filter((id) => id !== spotlightId);
-    return (
-      <div className="flex flex-col h-full gap-3">
-        <div className="flex-1 min-h-0 relative">
-          <ParticipantTile id={spotlightId} isSpotlight {...common} />
-          {annotating && <AnnotationOverlay />}
-        </div>
-        {others.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {others.map((id) => (
-              <div key={id} className="w-44 h-32 shrink-0">
-                <ParticipantTile id={id} {...common} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   const cols =
     ids.length <= 1
-      ? "grid-cols-1"
+      ? "grid-cols-1 max-w-xl mx-auto"
       : ids.length <= 4
-        ? "grid-cols-1 md:grid-cols-2"
+        ? "grid-cols-1 sm:grid-cols-2"
         : ids.length <= 9
-          ? "grid-cols-2 md:grid-cols-3"
-          : "grid-cols-3 md:grid-cols-4";
+          ? "grid-cols-2 lg:grid-cols-3"
+          : "grid-cols-2 md:grid-cols-3 xl:grid-cols-4";
+  const orderedIds = spotlightId && ids.includes(spotlightId)
+    ? [spotlightId, ...ids.filter((id) => id !== spotlightId)]
+    : ids;
   return (
-    <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-fr h-full`}>
-      {ids.map((id) => (
-        <ParticipantTile key={id} id={id} {...common} />
-      ))}
+    <div className="relative h-full overflow-y-auto">
+      <div className={`grid ${cols} gap-2 md:gap-3 auto-rows-max content-start`}>
+        {orderedIds.map((id) => (
+          <ParticipantTile key={id} id={id} isSpotlight={id === spotlightId} {...common} />
+        ))}
+      </div>
+      {annotating && <AnnotationOverlay />}
     </div>
   );
 }
@@ -1252,6 +1322,9 @@ function ParticipantTile({
   const userName = useParticipantProperty(id, "user_name") as string | undefined;
   const isLocal = useParticipantProperty(id, "local") as boolean | undefined;
   const isOwnerTile = useParticipantProperty(id, "owner") as boolean | undefined;
+  const userData = useParticipantProperty(id, "userData") as
+    | { avatarUrl?: string | null; faction?: string | null; role?: string | null }
+    | undefined;
 
   // Try to associate this Daily participant with a Supabase attendee by name
   const attendee = useMemo(() => {
@@ -1296,7 +1369,7 @@ function ParticipantTile({
 
   return (
     <div
-      className={`relative rounded-2xl overflow-hidden ${isSpotlight ? "border-gold-strong h-full" : "border-gold"} bg-[oklch(0.10_0.05_270)] animate-fade-up group`}
+      className={`relative aspect-square w-full min-w-0 rounded-lg overflow-hidden ${isSpotlight ? "border-gold-strong" : "border-gold"} bg-card animate-fade-up group`}
     >
       {video.persistentTrack ? (
         <video
@@ -1307,11 +1380,17 @@ function ParticipantTile({
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,oklch(0.22_0.10_290/0.7),oklch(0.10_0.05_270/0.95))]">
+        <div className="absolute inset-0 flex items-center justify-center bg-card">
           <div
-            className={`${isSpotlight ? "size-32 text-5xl" : "size-20 text-3xl"} rounded-full bg-[image:var(--gradient-gold)] flex items-center justify-center font-display font-bold text-[#0a0a2e] glow-gold-sm`}
+            className="size-20 rounded-full bg-[image:var(--gradient-gold)] flex items-center justify-center font-display text-3xl font-bold text-primary-foreground glow-gold-sm"
           >
-            {initials}
+            {userData?.avatarUrl ? (
+              <img
+                src={userData.avatarUrl}
+                alt={`${userName ?? "Participant"} profile`}
+                className="size-full rounded-full object-cover"
+              />
+            ) : initials}
           </div>
         </div>
       )}
@@ -1354,15 +1433,34 @@ function ParticipantTile({
       )}
 
       {/* Bottom name */}
-      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-        <span className="text-xs px-2.5 py-1 rounded-full bg-[oklch(0.10_0.05_270/0.85)] border border-[oklch(0.82_0.16_88/0.5)] text-[oklch(0.92_0.10_88)] glow-gold-sm backdrop-blur-sm">
-          {userName ?? "Guest"} {isLocal && "· you"}
-        </span>
-        {audio.isOff && (
-          <span className="text-xs p-1.5 rounded-full bg-rose-500/80 text-white">
-            <MicOff className="size-3" />
-          </span>
+      <div className="absolute inset-x-0 bottom-0 flex min-w-0 items-center gap-2 bg-background/85 p-2 backdrop-blur-sm sm:p-3">
+        {userData?.avatarUrl && (
+          <img
+            src={userData.avatarUrl}
+            alt=""
+            className="size-9 shrink-0 rounded-full border border-[var(--border-soft)] object-cover"
+          />
         )}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-semibold text-foreground">
+              {userName ?? "Guest"}{isLocal && " · you"}
+            </span>
+            {(isOwnerTile || attendee?.is_admin) && (
+              <span className="shrink-0 rounded-sm bg-[image:var(--gradient-gold)] px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+                Host
+              </span>
+            )}
+            {audio.isOff && <MicOff className="size-3.5 shrink-0 text-destructive" />}
+          </div>
+          {(userData?.faction || userData?.role) && (
+            <p className="truncate text-[11px] text-muted-foreground">
+              {[userData.faction, userData.role && !isOwnerTile && userData.role]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Live caption strip */}
